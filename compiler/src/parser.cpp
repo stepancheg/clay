@@ -230,9 +230,19 @@ static bool stringLiteral(ExprPtr &x) {
     Token* t;
     if (!next(t) || (t->tokenKind != T_STRING_LITERAL))
         return false;
-    IdentifierPtr id = Identifier::get(t->str, location);
+    std::string str;
+    str += t->str;
+    int p = save();
+    while (next(t) && (t->tokenKind == T_STRING_LITERAL)) {
+        str += t->str;
+        p = save();
+    }
+    restore(p);
+
+    IdentifierPtr id = Identifier::get(llvm::StringRef(str), location);
     x = new StringLiteral(id);
     x->location = location;
+
     return true;
 }
 
