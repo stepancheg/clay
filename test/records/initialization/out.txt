@@ -1,2 +1,0 @@
-Foo(0, a should be 0)
-Foo(10, a should be 5 times two)

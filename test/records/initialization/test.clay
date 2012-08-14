@@ -1,0 +1,35 @@
+import printer.(println);
+import strings.*;
+import sequences.operators.*;
+
+import test.*;
+
+
+record Foo (
+    a: Int,
+    b: String
+);
+
+overload Foo() --> returned:Foo {
+    returned <-- initializeRecord(Foo);
+    returned.b = String("a should be 0");
+}
+
+overload Foo(a, b) = initializeRecord(Foo, 2*a, b ++ " times two");
+
+testInitializeRecord(test) {
+    var foo1 = Foo();
+    expectEqual(test, "without params a", 0, foo1.a);
+    expectEqual(test, "without params b", String("a should be 0"), foo1.b);
+
+    var foo2 = Foo(5, String("a should be 5"));
+    expectEqual(test, "with params a", 10, foo2.a);
+    expectEqual(test, "with params b", String("a should be 5 times two"), foo2.b);
+}
+
+
+main() = testMain(
+    TestSuite("records.initialization", array(
+        TestCase("initializeRecord", testInitializeRecord),
+    )));
+
