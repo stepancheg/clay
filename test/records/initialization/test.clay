@@ -34,6 +34,14 @@ overload ThrowsInConstructor() --> returned:ThrowsInConstructor {
     throw Error(CStringRef());
 }
 
+record ThrowsInDestructor ();
+
+overload destroy(that:ThrowsInDestructor) {
+    println("destroy ThrowsInDestructor");
+    throw Error(CStringRef());
+}
+
+
 var counter = 0;
 
 record Counter (
@@ -48,6 +56,7 @@ overload Counter(that:Counter) --> returned:Counter {
 }
 
 overload destroy(that:Counter) {
+    println("destroy Counter");
     counter -: 1;
 }
 
@@ -68,10 +77,25 @@ testRecordConstructorThrows(test) {
     expectEqual(test, "count", 0, counter);
 }
 
+record RecordWithCounterAndThrowsInDestructor (
+    counter: Counter,
+    //throwsInDestructor: ThrowsInDestructor,
+    counter2: Counter,
+);
+
+testRecordDestructorThrows(test) {
+    counter = 0;
+    {
+        RecordWithCounterAndThrowsInDestructor();
+    }
+    expectEqual(test, "count", 0, counter);
+}
+
 
 main() = testMain(
     TestSuite("records.initialization", array(
         TestCase("initializeRecord", testInitializeRecord),
         TestCase("record constructor throws", testRecordConstructorThrows),
+        TestCase("record destructor throws", testRecordDestructorThrows),
     )));
 
