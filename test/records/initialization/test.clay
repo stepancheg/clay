@@ -28,8 +28,50 @@ testInitializeRecord(test) {
 }
 
 
+record ThrowsInConstructor ();
+
+overload ThrowsInConstructor() --> returned:ThrowsInConstructor {
+    throw Error(CStringRef());
+}
+
+var counter = 0;
+
+record Counter (
+);
+
+overload Counter() --> returned:Counter {
+    counter +: 1;
+}
+
+overload Counter(that:Counter) --> returned:Counter {
+    counter +: 1;
+}
+
+overload destroy(that:Counter) {
+    counter -: 1;
+}
+
+record RecordWithCounterAndThrowsInConstructor (
+    counter: Counter,
+    throwsInConstructor: ThrowsInConstructor,
+    counter2: Counter,
+);
+
+testRecordConstructorThrows(test) {
+    counter = 0;
+    try {
+        RecordWithCounterAndThrowsInConstructor();
+        expectTrue(test, "fail", false);
+    } catch (e) {
+        // expecting
+    }
+    expectEqual(test, "count", 0, counter);
+}
+
+
 main() = testMain(
     TestSuite("records.initialization", array(
         TestCase("initializeRecord", testInitializeRecord),
+        TestCase("record constructor throws", testRecordConstructorThrows),
     )));
 
