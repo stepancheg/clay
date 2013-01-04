@@ -526,15 +526,6 @@ static string paramCountString(const CodePtr& code) {
     return s;
 }
 
-template <typename T>
-static string toString(const T& t) {
-    string s;
-    llvm::raw_string_ostream ss(s);
-    ss << t;
-    ss.flush();
-    return s;
-}
-
 void addProcedureOverload(ProcedurePtr proc, EnvPtr env, OverloadPtr x) {
     if (!!proc->singleOverload && proc->singleOverload != x) {
         // TODO: points to wrong line

@@ -981,6 +981,15 @@ struct DebugPrinter {
     ~DebugPrinter();
 };
 
+template <typename T>
+static string toString(const T& t) {
+    string s;
+    llvm::raw_string_ostream ss(s);
+    ss << t;
+    ss.flush();
+    return s;
+}
+
 extern "C" void displayCompileContext();
 
 
