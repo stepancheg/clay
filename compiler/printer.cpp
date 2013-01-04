@@ -1279,6 +1279,10 @@ void typePrint(llvm::raw_ostream &out, TypePtr t) {
         out << "Array[" << x->elementType << ", " << x->size << "]";
         break;
     }
+    case STRING_LITERAL_TYPE : {
+        out << "StringLiteral2";
+        break;
+    }
     case VEC_TYPE : {
         VecType *x = (VecType *)t.ptr();
         out << "Vec[" << x->elementType << ", " << x->size << "]";

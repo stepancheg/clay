@@ -1,7 +1,7 @@
 
 /// @section  fieldRef, fieldRefByIndex 
 
-[T, FIELD when RecordWithField?(T, FIELD)]
+[T, FIELD when RecordWithField?(T, #FIELD)]
 forceinline overload fieldRef(x:T, #FIELD) {
     return ref ..recordFieldRefByName(x, #FIELD);
 }

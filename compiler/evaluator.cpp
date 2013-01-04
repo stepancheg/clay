@@ -414,6 +414,12 @@ ValueHolderPtr boolToValueHolder(bool x)
     return v;
 }
 
+ValueHolderPtr stringLiteralToValueHolder(const Identifier* identifier) {
+    ValueHolderPtr v = new ValueHolder(stringLiteralType);
+    v->as<const Identifier *>() = identifier;
+    return v;
+}
+
 
 
 //
@@ -1000,8 +1006,12 @@ void evalExpr(ExprPtr expr, EnvPtr env, MultiEValuePtr out)
         break;
     }
 
-    case STRING_LITERAL :
+    case STRING_LITERAL : {
+        StringLiteral *x = (StringLiteral *)expr.ptr();
+        ValueHolderPtr y = stringLiteralToValueHolder(x->value.ptr());
+        evalValueHolder(y, out);
         break;
+    }
 
     case FILE_EXPR :
     case ARG_EXPR :
@@ -2722,9 +2732,19 @@ static EnumTypePtr valueToEnumType(MultiEValuePtr args, unsigned index)
 static IdentifierPtr valueToIdentifier(MultiEValuePtr args, unsigned index)
 {
     ObjectPtr obj = valueToStatic(args->values[index]);
-    if (!obj || (obj->objKind != IDENTIFIER))
-        argumentError(index, "expecting identifier value");
-    return (Identifier *)obj.ptr();
+    llvm::errs() << !!obj << "\n";
+
+    if (!!obj && (obj->objKind == IDENTIFIER)) {
+        return (Identifier *)obj.ptr();
+    }
+
+    if (args->values[index]->objKind == EVALUE) {
+        EValue *valueHolder = (EValue *)args->values[index].ptr();
+        return valueHolder->as<IdentifierPtr>();
+    }
+
+    argumentError(index, "expecting any identifier, got " + toString(args->values[index]) + " in evaluator");
+    return NULL;
 }
 
 
@@ -4660,6 +4680,7 @@ void evalPrimOp(PrimOpPtr x, MultiEValuePtr args, MultiEValuePtr out)
         break;
     }
 
+#if 0
     case PRIM_StringLiteralP : {
         ensureArity(args, 1);
         bool result = false;
@@ -4672,6 +4693,7 @@ void evalPrimOp(PrimOpPtr x, MultiEValuePtr args, MultiEValuePtr out)
         evalStaticObject(vh.ptr(), out);
         break;
     }
+#endif
 
     case PRIM_stringLiteralByteIndex : {
         ensureArity(args, 2);
@@ -4732,6 +4754,7 @@ void evalPrimOp(PrimOpPtr x, MultiEValuePtr args, MultiEValuePtr out)
         break;
 
     case PRIM_FlagP : {
+        llvm::errs() << "PRIM_FlagP args " << args << "\n";
         ensureArity(args, 1);
         IdentifierPtr ident = valueToIdentifier(args, 0);
         llvm::StringMap<string>::const_iterator flag = globalFlags.find(ident->str);

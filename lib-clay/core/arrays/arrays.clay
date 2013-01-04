@@ -19,7 +19,7 @@ forceinline overload StaticSize(#Array[T,n]) : SizeT = SizeT(n);
 
 [T,n,I when Integer?(I)]
 forceinline overload index(a:Array[T,n], i:I) : ByRef[T] {
-    assert["boundsChecks"](i >= 0 and SizeT(i) < size(a), Array[T,n], " access out of bounds");
+    assert[#"boundsChecks"](i >= 0 and SizeT(i) < size(a), Array[T,n], " access out of bounds");
     return ref arrayRef(a, SizeT(i));
 }
 

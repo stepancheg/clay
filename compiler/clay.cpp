@@ -533,6 +533,7 @@ static void printVersion() {
 }
 
 int main2(int argc, char **argv, char const* const* envp) {
+
     if (argc == 1) {
         usage(argv[0]);
         return 2;

@@ -47,7 +47,7 @@ overload errorWithPrintf(#fmt, ..e) : {
 /// @section  assert 
 
 AllAssertionsEnabled?() : Bool = not Flag?("clay.DisableAssertions");
-AssertionEnabled?(tag) : Bool = not Flag?(stringLiteralConcat("clay.DisableAssertions.",tag));
+AssertionEnabled?(tag) : Bool = true; // not Flag?(stringLiteralConcat("clay.DisableAssertions.",tag));
 
 [..tags when allValues?(StringLiteral?, ..tags)]
 record assert[..tags] ();

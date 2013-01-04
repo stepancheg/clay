@@ -779,6 +779,7 @@ static ModulePtr typeModule(TypePtr t) {
     case CODE_POINTER_TYPE :
     case CCODE_POINTER_TYPE :
     case ARRAY_TYPE :
+    case STRING_LITERAL_TYPE :
     case VEC_TYPE :
     case TUPLE_TYPE :
     case UNION_TYPE :
@@ -920,6 +921,8 @@ static ModulePtr makePrimitivesModule() {
     addPrim(prims, "Complex32", complex32Type.ptr());
     addPrim(prims, "Complex64", complex64Type.ptr());
     addPrim(prims, "Complex80", complex80Type.ptr());
+
+    addPrim(prims, "StringLiteral", stringLiteralType.ptr());
 
     GlobalAliasPtr v =
         new GlobalAlias(prims.ptr(),
@@ -1097,13 +1100,17 @@ static ModulePtr makePrimitivesModule() {
     PRIMITIVE(enumToInt);
     PRIMITIVE(intToEnum);
 
-    PRIMITIVE(StringLiteralP);
+    //PRIMITIVE(StringLiteralP);
     PRIMITIVE(stringLiteralByteIndex);
     PRIMITIVE(stringLiteralBytes);
     PRIMITIVE(stringLiteralByteSize);
     PRIMITIVE(stringLiteralByteSlice);
     PRIMITIVE(stringLiteralConcat);
     PRIMITIVE(stringLiteralFromBytes);
+
+    PRIMITIVE(stringLiteral2Begin);
+    PRIMITIVE(stringLiteral2End);
+    PRIMITIVE(stringLiteral2Repr);
 
     PRIMITIVE(stringTableConstant);
 

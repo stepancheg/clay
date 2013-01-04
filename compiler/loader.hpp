@@ -178,6 +178,10 @@ enum PrimOpCode {
 
     PRIM_stringTableConstant,
 
+    PRIM_stringLiteral2Begin,
+    PRIM_stringLiteral2End,
+    PRIM_stringLiteral2Repr,
+
     PRIM_FlagP,
     PRIM_Flag,
 

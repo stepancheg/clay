@@ -16,7 +16,7 @@ ExprPtr desugarCharLiteral(char c) {
     call->parenArgs->add(new IntLiteral(out.str(), "ss"));
     return call.ptr();
 }
-    
+
 static ModulePtr dottedImportedModule(FieldRef *x, Module *module) {
     llvm::StringMap<ModuleLookup> *moduleNode = &module->importedModuleNames;
     FieldRef *fieldRefNode = x;

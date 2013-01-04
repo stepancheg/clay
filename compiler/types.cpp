@@ -39,6 +39,8 @@ TypePtr cIntType;
 TypePtr cSizeTType;
 TypePtr cPtrDiffTType;
 
+TypePtr stringLiteralType;
+
 static vector<vector<PointerTypePtr> > pointerTypes;
 static vector<vector<CodePointerTypePtr> > codePointerTypes;
 static vector<vector<CCodePointerTypePtr> > cCodePointerTypes;
@@ -105,6 +107,8 @@ void initTypes() {
     default :
         assert(false);
     }
+
+    stringLiteralType = new StringLiteralType();
 
     int N = 1024;
     pointerTypes.resize(N);
@@ -1264,6 +1268,15 @@ static void declareLLVMType(TypePtr t) {
         }
         break;
     }
+    case STRING_LITERAL_TYPE : {
+        StringLiteralType *x = (StringLiteralType *)t.ptr();
+        llvm::PointerType *pointerType = llvmPointerType(int8Type);
+        t->llType = llvmArrayType(pointerType, 2);
+        if (llvmDIBuilder != NULL) {
+            assert(false); // TODO
+        }
+        break;
+    }
     case VEC_TYPE : {
         VecType *x = (VecType *)t.ptr();
         t->llType = llvm::VectorType::get(llvmType(x->elementType), x->size);
@@ -1375,6 +1388,7 @@ static void defineLLVMType(TypePtr t) {
     case CODE_POINTER_TYPE :
     case CCODE_POINTER_TYPE :
     case ARRAY_TYPE :
+    case STRING_LITERAL_TYPE :
     case VEC_TYPE :
     case STATIC_TYPE :
     case ENUM_TYPE :

@@ -63,6 +63,8 @@ forceinline overload cstring(a:StringLiteralRef) : Pointer[Int8]
 [s when StringLiteral?(s)]
 forceinline overload cstring(#s) : Pointer[Int8] = Pointer[Int8](begin(s));
 
+forceinline overload cstring(a:StringLiteral) : Pointer[Int8] = stringLiteral2Begin(a);
+
 
 /// @section  coordinates and iteration 
 
@@ -153,6 +155,8 @@ overload strl(#x) = StaticName(#x);
 [i when StringLiteral?(i)]
 overload strl(#i) = i;
 
+overload strl(s: StringLiteral) = s;
+
 overload strl() = "";
 
 // stringLiteralCapitalize, stringLiteralDecapitalize
@@ -184,3 +188,27 @@ stringLiteralStaticChars(#s) =
 private staticCharToByte(#c) = #Int(c);
 
 stringLiteralFromChars(..c) = stringLiteralFromBytes(..mapValues(staticCharToByte, ..c));
+
+StringLiteral?(s) = Type(s) == StringLiteral;
+
+forceinline overload StringLiteral(src: StringLiteral) --> returned: StringLiteral {
+    // TODO
+}
+
+// TODO: drop
+forceinline overload destroy(s: StringLiteral) {}
+
+overload ContiguousSequence?(#StringLiteral) = true;
+
+private alias StringLiteralRepr = Array[Pointer[Char], 2];
+
+stringLiteralRepr(s: StringLiteral) = bitcast(StringLiteralRepr, s);
+
+forceinline overload begin(s:StringLiteral) = stringLiteralRepr(s)[0];
+forceinline overload end(s:StringLiteral) = stringLiteralRepr(s)[1];
+forceinline overload size(s:StringLiteral): SizeT = SizeT(end(s) - begin(s));
+
+forceinline overload iterator(a:StringLiteral) = coordinateRange(begin(a), end(a));
+
+staticassert(String?(#StringLiteral));
+

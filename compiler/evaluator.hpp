@@ -66,6 +66,7 @@ ValueHolderPtr intToValueHolder(int x);
 ValueHolderPtr sizeTToValueHolder(size_t x);
 ValueHolderPtr ptrDiffTToValueHolder(ptrdiff_t x);
 ValueHolderPtr boolToValueHolder(bool x);
+ValueHolderPtr stringLiteralToValueHolder(const Identifier* identifier);
 
 size_t valueHolderToSizeT(ValueHolderPtr vh);
 

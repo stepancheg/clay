@@ -1,4 +1,3 @@
-
 #include "clay.hpp"
 #include "evaluator.hpp"
 #include "codegen.hpp"
@@ -677,8 +676,9 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
     }
 
     case STRING_LITERAL : {
-        StringLiteral *x = (StringLiteral *)expr.ptr();
-        return new MultiPValue(staticPValue(x->value.ptr()));
+        //StringLiteral *x = (StringLiteral *)expr.ptr();
+        //return new MultiPValue(staticPValue(x->value.ptr()));
+        return new MultiPValue(PVData(stringLiteralType, true));
     }
 
     case NAME_REF : {
@@ -3468,8 +3468,10 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
         return new MultiPValue(PVData(t.ptr(), true));
     }
 
+#if 0
     case PRIM_StringLiteralP :
         return new MultiPValue(PVData(boolType, true));
+#endif
 
     case PRIM_stringLiteralByteIndex :
         return new MultiPValue(PVData(cIntType, true));
@@ -3514,8 +3516,10 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
     }
 
     case PRIM_stringLiteralConcat : {
+        /*
         llvm::SmallString<32> result;
         for (size_t i = 0, sz = args->size(); i < sz; ++i) {
+            llvm::errs() << "param type to stringLiteralConcat " << args->values[i].type << "\n";
             ObjectPtr obj = unwrapStaticType(args->values[i].type);
             if (!obj || (obj->objKind != IDENTIFIER))
                 argumentError(i, "expecting a string literal value");
@@ -3523,9 +3527,12 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
             result.append(ident->str.begin(), ident->str.end());
         }
         return analyzeStaticObject(Identifier::get(result));
+        */
+        return new MultiPValue(PVData(stringLiteralType, true));
     }
 
     case PRIM_stringLiteralFromBytes : {
+        /*
         std::string result;
         for (size_t i = 0, sz = args->size(); i < sz; ++i) {
             ObjectPtr obj = unwrapStaticType(args->values[i].type);
@@ -3541,6 +3548,14 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
             result.push_back((char)byte);
         }
         return analyzeStaticObject(Identifier::get(result));
+        */
+        return new MultiPValue(PVData(stringLiteralType, true));
+    }
+
+    case PRIM_stringLiteral2Begin :
+    case PRIM_stringLiteral2End :
+    {
+        return new MultiPValue(PVData(pointerType(int8Type), false));
     }
 
     case PRIM_stringTableConstant :

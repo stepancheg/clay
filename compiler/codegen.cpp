@@ -991,8 +991,12 @@ void codegenExpr(ExprPtr expr,
         break;
     }
 
-    case STRING_LITERAL :
+    case STRING_LITERAL : {
+        StringLiteral *x = (StringLiteral *)expr.ptr();
+        ValueHolderPtr y = stringLiteralToValueHolder(x->value.ptr());
+        codegenValueHolder(y, ctx, out);
         break;
+    }
 
     case FILE_EXPR :
     case ARG_EXPR :
@@ -1764,6 +1768,11 @@ void codegenCompileTimeValue(EValuePtr ev,
     case FLOAT_TYPE : {
         llvm::Value *llv = codegenSimpleConstant(ev);
         ctx->builder->CreateStore(llv, out0->llValue);
+        break;
+    }
+
+    case STRING_LITERAL_TYPE : {
+        assert("false");
         break;
     }
 
@@ -4756,7 +4765,7 @@ static IdentifierPtr valueToIdentifier(MultiCValuePtr args, unsigned index)
 {
     ObjectPtr obj = valueToStatic(args->values[index]);
     if (!obj || (obj->objKind != IDENTIFIER))
-        argumentError(index, "expecting identifier value");
+        argumentError(index, "expecting identifier value, got " + toString(args->values[index]) + " in codegen");
     return (Identifier *)obj.ptr();
 }
 
@@ -4952,6 +4961,15 @@ static llvm::Value *tupleValue(MultiCValuePtr args,
             argumentTypeError(index, "tuple type", cv->type);
         type = (TupleType *)cv->type.ptr();
     }
+    return cv->llValue;
+}
+
+static llvm::Value *stringLiteralValue(MultiCValuePtr args,
+                                       unsigned index)
+{
+    CValuePtr cv = args->values[index];
+    if (cv->type->typeKind != STRING_LITERAL_TYPE)
+        error("wrong type");
     return cv->llValue;
 }
 
@@ -6462,6 +6480,7 @@ void codegenPrimOp(PrimOpPtr x,
         break;
     }
 
+#if 0
     case PRIM_StringLiteralP : {
         ensureArity(args, 1);
         bool result = false;
@@ -6474,6 +6493,7 @@ void codegenPrimOp(PrimOpPtr x,
         codegenStaticObject(vh.ptr(), ctx, out);
         break;
     }
+#endif
 
     case PRIM_stringLiteralByteIndex : {
         ensureArity(args, 2);
@@ -6515,6 +6535,29 @@ void codegenPrimOp(PrimOpPtr x,
     case PRIM_stringLiteralConcat :
     case PRIM_stringLiteralFromBytes :
         break;
+
+    case PRIM_stringLiteral2Begin : {
+        ensureArity(args, 1);
+        assert(out->size() == 1);
+
+        CValuePtr cv = args->values[0];
+        CValuePtr out0 = out->values[0];
+
+        llvm::errs() << "in  " << cv << "\n";
+        llvm::errs() << "in  " << *cv->type->llType << "\n";
+        llvm::errs() << "out " << out0 << "\n";
+        llvm::errs() << "out " << *out0->type->llType << "\n";
+
+        assert(out0->type == pointerType(pointerType(int8Type)));
+
+        assert(!!cv->llValue);
+
+        llvm::Value *ptr = ctx->builder->CreateConstGEP2_32(cv->llValue, 0, 0);
+
+        ctx->builder->CreateStore(ptr, out0->llValue);
+
+        break;
+    }
 
     case PRIM_stringTableConstant : {
         ensureArity(args, 1);

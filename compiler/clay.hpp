@@ -1335,7 +1335,8 @@ struct ForeignExpr : public Expr {
 struct ObjectExpr : public Expr {
     ObjectPtr obj;
     ObjectExpr(ObjectPtr obj)
-        : Expr(OBJECT_EXPR), obj(obj) {}
+        : Expr(OBJECT_EXPR), obj(obj) {
+    }
 };
 
 struct EvalExpr : public Expr {
@@ -2676,6 +2677,7 @@ enum TypeKind {
     INTEGER_TYPE,
     FLOAT_TYPE,
     COMPLEX_TYPE,
+    STRING_LITERAL_TYPE,
     POINTER_TYPE,
     CODE_POINTER_TYPE,
     CCODE_POINTER_TYPE,
@@ -2742,6 +2744,11 @@ struct ComplexType : public Type {
     int bits:15;
     ComplexType(int bits)
         : Type(COMPLEX_TYPE), layout(NULL), bits(bits) {}
+};
+
+struct StringLiteralType : public Type {
+    StringLiteralType() :
+        Type(STRING_LITERAL_TYPE) {}
 };
 
 struct PointerType : public Type {
@@ -2867,7 +2874,11 @@ struct VariantType : public Type {
 struct StaticType : public Type {
     ObjectPtr obj;
     StaticType(ObjectPtr obj)
-        : Type(STATIC_TYPE), obj(obj) {}
+        : Type(STATIC_TYPE), obj(obj) {
+        if (obj->objKind == TYPE) {
+            assert(((Type*) obj.ptr())->typeKind != STATIC_TYPE);
+        }
+    }
 };
 
 struct EnumType : public Type {
@@ -2883,7 +2894,6 @@ struct NewType : public Type {
     NewType(NewTypeDeclPtr newtype)
         : Type(NEW_TYPE), newtype(newtype) {}
 };
-
 
 //
 // Pattern
