@@ -250,10 +250,13 @@ static bool charLiteral(ExprPtr &x) {
 static bool stringLiteral(ExprPtr &x) {
     Location location = currentLocation();
     Token* t;
-    if (!next(t) || (t->tokenKind != T_STRING_LITERAL))
+    if (!next(t) || (t->tokenKind != T_STRING_LITERAL && t->tokenKind != T_STRING_LITERAL2))
         return false;
     IdentifierPtr id = Identifier::get(t->str, location);
-    x = new StringLiteral(id);
+    if (t->tokenKind == T_STRING_LITERAL)
+        x = new StringLiteral(id);
+    else
+        x = new StringLiteral2(id);
     x->location = location;
     return true;
 }

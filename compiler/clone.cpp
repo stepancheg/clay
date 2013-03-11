@@ -76,6 +76,12 @@ ExprPtr clone(ExprPtr x)
         break;
     }
 
+    case STRING_LITERAL2 : {
+        StringLiteral2 *y = (StringLiteral2 *)x.ptr();
+        out = new StringLiteral2(y->value);
+        break;
+    }
+
     case FILE_EXPR : {
         out = new FILEExpr();
         break;

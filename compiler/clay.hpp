@@ -955,6 +955,7 @@ enum ExprKind {
     FLOAT_LITERAL,
     CHAR_LITERAL,
     STRING_LITERAL,
+    STRING_LITERAL2,
 
     FILE_EXPR,
     LINE_EXPR,
@@ -1037,6 +1038,12 @@ struct StringLiteral : public Expr {
     IdentifierPtr value;
     StringLiteral(IdentifierPtr value)
         : Expr(STRING_LITERAL), value(value) {}
+};
+
+struct StringLiteral2 : public Expr {
+    IdentifierPtr value;
+    StringLiteral2(IdentifierPtr value)
+        : Expr(STRING_LITERAL2), value(value) {}
 };
 
 struct NameRef : public Expr {
@@ -2485,6 +2492,7 @@ enum TypeKind {
     RECORD_TYPE,
     VARIANT_TYPE,
     STATIC_TYPE,
+    STRING_LITERAL2_TYPE,
     ENUM_TYPE,
     NEW_TYPE
 };
@@ -2669,6 +2677,11 @@ struct StaticType : public Type {
     ObjectPtr obj;
     StaticType(ObjectPtr obj)
         : Type(STATIC_TYPE), obj(obj) {}
+};
+
+struct StringLiteral2Type : public Type {
+    StringLiteral2Type()
+        : Type(STRING_LITERAL2_TYPE) {}
 };
 
 struct EnumType : public Type {

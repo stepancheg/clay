@@ -331,6 +331,14 @@ static bool singleQuoteStringToken(Token &x) {
     char c;
     if (!next(c) || (c != '"')) return false;
     x.tokenKind = T_STRING_LITERAL;
+
+    const char *p = save();
+    if (next(c) && c == '2' && next(c) && c == '.') {
+        x.tokenKind = T_STRING_LITERAL2;
+    } else {
+        restore(p);
+    }
+
     x.str.clear();
     while (true) {
         const char *p = save();
