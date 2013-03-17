@@ -28,7 +28,7 @@ overload hash(x:H) = bitcast(SizeT, x.digest);
 [C when DigestContext?(C)]
 define digestFinish(c: C);
 
-[A, S when Algorithm?(A) and MessagePart?(S)]
+[A, S when Algorithm?(#A) and MessagePart?(S)]
 digest(message: S, #A) --> returned: Digest(#A) {
     var context = DigestContext(#A)();
     digestUpdate(context, message);

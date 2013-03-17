@@ -4,6 +4,7 @@
 #include "loader.hpp"
 #include "patterns.hpp"
 #include "objects.hpp"
+#include "string_literal.hpp"
 
 
 #pragma clang diagnostic ignored "-Wcovered-switch-default"
@@ -892,12 +893,23 @@ static bool isSafe(char ch)
 void printStaticName(llvm::raw_ostream &out, ObjectPtr x)
 {
     if (x->objKind == IDENTIFIER) {
+        // TODO: not sure useful
+        abort();
         Identifier *y = (Identifier *)x.ptr();
         out << y->str;
+        return;
     }
-    else {
-        printName(out, x);
+
+    if (x->objKind == VALUE_HOLDER) {
+        ValueHolder* valueHolder = (ValueHolder*) x.ptr();
+
+        if (valueHolder->type->typeKind == STRING_LITERAL_TYPE) {
+            out << valueHolder->as<StringLiteralRepr>().stringRef();
+            return;
+        }
     }
+
+    printName(out, x);
 }
 
 void printName(llvm::raw_ostream &out, ObjectPtr x)
@@ -1005,7 +1017,11 @@ void printName(llvm::raw_ostream &out, ObjectPtr x)
     }
     case VALUE_HOLDER : {
         ValueHolder *y = (ValueHolder *)x.ptr();
-        if (isStaticOrTupleOfStatics(y->type)) {
+        if (y->type->typeKind == STRING_LITERAL_TYPE) {
+            // TODO: hack
+            printName(out, Identifier::get(y->as<StringLiteralRepr>().stringRef()));
+        }
+        else if (isStaticOrTupleOfStatics(y->type)) {
             printStaticOrTupleOfStatics(out, y->type);
         }
         else {
@@ -1135,6 +1151,10 @@ void printValue(llvm::raw_ostream &out, EValuePtr ev)
         }
         break;
     }
+    case STRING_LITERAL_TYPE : {
+        out << ev->as<StringLiteralRepr>().stringRef();
+        break;
+    }
     default :
         break;
     }
@@ -1226,6 +1246,10 @@ void typePrint(llvm::raw_ostream &out, TypePtr t) {
     case COMPLEX_TYPE : {
         ComplexType *x = (ComplexType *)t.ptr();
         out << "Complex" << x->bits;
+        break;
+    }
+    case STRING_LITERAL_TYPE : {
+        out << "StringLiteral";
         break;
     }
     case POINTER_TYPE : {

@@ -3,9 +3,10 @@ import test.(TestSuite, TestCase, TestStatus, testMain);
 
 private test?(mod, name) =
     stringLiteralStartsWith?(name, "TEST_")
-    and CallDefined?(staticFieldRef(mod, name));
+    //and CallDefined?(staticFieldRef(mod, name));
+    ;
 
-private xfail?(name) : Bool = stringLiteralStartsWith?(name, "TEST_XFAIL_");
+private xfail?(name) : Bool = unwrapStatic(#stringLiteralStartsWith?(name, "TEST_XFAIL_"));
 
 [mod] moduleTestNames(#mod) =
     ..filterValues(name -> test?(mod, name), ..ModuleMemberNames(mod));

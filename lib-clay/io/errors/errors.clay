@@ -4,10 +4,10 @@ import printer.protocol.(printTo,printReprTo);
 
 record GenericIOError(code:Int, where:StringLiteralRef);
 
-[I, S when Integer?(I) and StringLiteral?(S)]
+[I, S when Integer?(I) and StringLiteral?(#S)]
 overload GenericIOError(code:I, #S) --> returned:GenericIOError {
     returned.code = Int(code);
-    returned.where = StringLiteralRef(S);
+    returned.where = StringLiteralRef(#S);
 }
 
 overload printTo(stream, x:GenericIOError) {

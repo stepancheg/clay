@@ -80,7 +80,7 @@ overload findField(#pos, field) = -1;
 overload staticIndex(x:T, #i) =
     ref staticIndex(referencePtr(x)^, #i);
 
-[T, Field when ReferenceType?(T) and (fieldNameIndex(T, Field) >= 0)]
+[T, Field when ReferenceType?(T) and (fieldNameIndex(T, #Field) >= 0)]
 overload fieldRef(x:T, #Field) =
     ref staticIndex(x, #fieldNameIndex(T, Field));
 

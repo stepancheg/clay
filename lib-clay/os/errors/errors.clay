@@ -4,7 +4,7 @@ import data.strings.*;
 
 record GenericOSError(code:Int, where:StringLiteralRef);
 
-[I, S when Integer?(I) and StringLiteral?(S)]
+[I, S when Integer?(I) and StringLiteral?(#S)]
 overload GenericOSError(code:I, #S) --> returned:GenericOSError {
     returned.code = Int(code);
     returned.where = StringLiteralRef(S);

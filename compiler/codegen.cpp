@@ -14,6 +14,7 @@
 #include "env.hpp"
 #include "objects.hpp"
 #include "error.hpp"
+#include "string_literal.hpp"
 #include "codegen_op.hpp"
 
 #include "codegen.hpp"
@@ -270,6 +271,13 @@ llvm::BasicBlock *newBasicBlock(llvm::StringRef name, CodegenContext* ctx)
 CValuePtr staticCValue(ObjectPtr obj, CodegenContext* ctx)
 {
     TypePtr t = staticType(obj);
+    if (ctx->valueForStatics == NULL)
+        ctx->valueForStatics = ctx->initBuilder->CreateAlloca(llvmType(t));
+    return new CValue(t, ctx->valueForStatics);
+}
+
+static CValuePtr staticCValueFromIdentifier(Identifier* identifier, CodegenContext* ctx) {
+    TypePtr t = identifierToStaticStringLiteralType(identifier);
     if (ctx->valueForStatics == NULL)
         ctx->valueForStatics = ctx->initBuilder->CreateAlloca(llvmType(t));
     return new CValue(t, ctx->valueForStatics);
@@ -1325,10 +1333,14 @@ void codegenStaticObject(ObjectPtr x,
     case PRIM_OP :
     case PROCEDURE :
     case MODULE :
-    case INTRINSIC :
-    case IDENTIFIER : {
+    case INTRINSIC : {
         assert(out->size() == 1);
         assert(out->values[0]->type == staticType(x));
+        break;
+    }
+
+    case IDENTIFIER : {
+        abort();
         break;
     }
 
@@ -1772,6 +1784,17 @@ void codegenCompileTimeValue(EValuePtr ev,
         llvm::Value *destPtr2 = ctx->builder->CreateConstGEP2_32(out0->llValue, 0, 1);
         CValuePtr cgDest2 = new CValue(imagType(tt->bits), destPtr2);
         codegenCompileTimeValue(evSrc2, ctx, new MultiCValue(cgDest2));
+        break;
+    }
+
+    case STRING_LITERAL_TYPE : {
+        llvm::StringRef ident = ev->as<StringLiteralRepr>().stringRef();
+        llvm::Value *value = codegenStringTableConstant(ident);
+
+        assert(out->size() == 1);
+        CValuePtr out0 = out->values[0];
+        //assert(out0->type == pointerType(cSizeTType));
+        ctx->builder->CreateStore(value, out0->llValue);
         break;
     }
 
@@ -2685,11 +2708,17 @@ static void interpolateExpr(SourcePtr source, unsigned offset, unsigned length,
         {
             printValue(outstream, new EValue(vh->type, vh->buf));
         }
+        else if (vh->type->typeKind == STRING_LITERAL_TYPE) {
+            Identifier *y = Identifier::get(vh->as<StringLiteralRepr>().stringRef());
+            outstream << y->str;
+        }
         else {
             error("only booleans, integers, and float values are supported");
         }
     }
     else if (x->objKind == IDENTIFIER) {
+        abort();
+        // TODO: dead
         Identifier *y = (Identifier *)x.ptr();
         outstream << y->str;
     }
@@ -3737,7 +3766,7 @@ bool codegenStatement(StatementPtr stmt,
                 );
                 call->parenArgs->add(x->exprs->exprs[0]);
                 call->parenArgs->add(y->expr);
-                call->parenArgs->add(new ObjectExpr(y->name.ptr()));
+                call->parenArgs->add(identifierPtrToStaticExpr(y->name->str).ptr());
                 call->parenArgs->exprs.insert(call->parenArgs->exprs.end(), x->exprs->exprs.begin()+2, x->exprs->exprs.end());
                 return codegenStatement(new ExprStatement(call.ptr()), env, ctx);
             }
@@ -4468,7 +4497,7 @@ void codegenExprAssign(ExprPtr left,
         ExprPtr base = x->expr;
         PVData pvBase = safeAnalyzeOne(base, env);
         if (pvBase.type->typeKind != STATIC_TYPE) {
-            CValuePtr cvName = staticCValue(x->name.ptr(), ctx);
+            CValuePtr cvName = staticCValueFromIdentifier(x->name.ptr(), ctx);
             MultiPValuePtr pvArgs = new MultiPValue(pvBase);
             pvArgs->add(PVData(cvName->type, true));
             pvArgs->add(pvRight);

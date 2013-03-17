@@ -24,7 +24,7 @@ overload Exception() = Exception(NoException());
 record GenericException (
     message: StringLiteralRef,
 );
-[S when StringLiteral?(S)]
+[S when StringLiteral?(#S)]
 overload GenericException(#S) : GenericException 
     = GenericException(StringLiteralRef(S));
 
@@ -93,9 +93,9 @@ alias overload throwValue(x, context) : {
     signalException(RawPointer(exp));
 }
 
-[S when StringLiteral?(S)]
+[S when StringLiteral?(#S)]
 alias overload throwValue(#S) : {
-    throwValue(GenericException(S));
+    throwValue(GenericException(#S));
 }
 
 overload continueException(exp:RawPointer) : {

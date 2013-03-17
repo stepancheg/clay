@@ -13,6 +13,7 @@ void codegenPrimOp(PrimOpPtr x,
                    CodegenContext* ctx,
                    MultiCValuePtr out);
 
+llvm::Constant *codegenStringTableConstant(llvm::StringRef s);
 
 }
 

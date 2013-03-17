@@ -35,15 +35,15 @@ SizedUniString?(A) = UniString?(A) and SizedSequence?(A);
 /// @section  ContiguousString? 
 
 [A]
-ContiguousString?(#A) = String?(A) and ContiguousSequence?(A);
+ContiguousString?(#A) = String?(#A) and ContiguousSequence?(#A);
 
 [A]
-ContiguousUniString?(#A) = UniString?(A) and ContiguousSequence?(A);
+ContiguousUniString?(#A) = UniString?(#A) and ContiguousSequence?(#A);
 
 
 
 /// @section  CCompatibleString? 
 
 [A]
-CCompatibleString?(#A) : Bool = String?(A) and CallDefined?(cstring, A);
+CCompatibleString?(#A) : Bool = String?(#A) and CallDefined?(cstring, #A);
 
