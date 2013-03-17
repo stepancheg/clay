@@ -14,6 +14,31 @@ namespace clay {
 using namespace std;
 
 
+
+void Object::print() const {
+    llvm::errs() << *this << "\n";
+}
+
+void Env::print() const {
+    for (llvm::StringMap<ObjectPtr>::const_iterator entry = entries.begin();
+            entry != entries.end(); ++entry)
+    {
+        llvm::errs() << entry->first() << " -> " << entry->second << "\n";
+    }
+    if (entries.empty()) {
+        llvm::errs() << "(empty)\n";
+    }
+
+    if (!!parent) {
+        llvm::errs() << "\n";
+        if (parent->objKind == MODULE) {
+            llvm::errs() << "module\n";
+        } else {
+            parent->print();
+        }
+    }
+}
+
 
 //
 // overload <<
@@ -789,7 +814,7 @@ static void print(llvm::raw_ostream &out, const Object *x) {
 
     default :
         out << "UnknownObj(" << x->objKind << ")";
-        assert(false);
+        break;
     }
 }
 

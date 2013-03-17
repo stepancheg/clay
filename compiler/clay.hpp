@@ -440,6 +440,9 @@ struct Object {
         }
     }
     virtual ~Object() {}
+
+    // print to stderr, for debugging
+    virtual void print() const;
 };
 
 typedef Pointer<Object> ObjectPtr;
@@ -2459,6 +2462,8 @@ struct Env : public Object {
         : Object(ENV), parent(parent.ptr()), exceptionAvailable(false) {}
     Env(EnvPtr parent, bool exceptionAvailable = false)
         : Object(ENV), parent(parent.ptr()), exceptionAvailable(exceptionAvailable) {}
+
+    void print() const;
 };
 
 
