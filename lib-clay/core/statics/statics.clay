@@ -59,4 +59,4 @@ forceinline overload call(#F, forward ..args:AA) =
 
 [Module, Ident]
 forceinline overload fieldRef(#Module, #Ident) =
-    forward staticFieldRef(Module, Ident);
+    forward staticFieldRef(Module, #Ident);

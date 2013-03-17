@@ -968,6 +968,7 @@ static ModulePtr makePrimitivesModule() {
     addPrim(prims, "Complex32", complex32Type.ptr());
     addPrim(prims, "Complex64", complex64Type.ptr());
     addPrim(prims, "Complex80", complex80Type.ptr());
+    addPrim(prims, "StringLiteral", stringLiteralType.ptr());
 
     GlobalAliasPtr v =
         new GlobalAlias(prims.ptr(),

@@ -6,6 +6,7 @@
 #include "parser.hpp"
 #include "clone.hpp"
 #include "objects.hpp"
+#include "string_literal.hpp"
 #include "error.hpp"
 
 
@@ -44,6 +45,13 @@ static ModulePtr dottedImportedModule(FieldRef *x, Module *module) {
     return NULL;
 }
 
+StaticExprPtr identifierPtrToStaticExpr(llvm::StringRef identifier) {
+    ValueHolderPtr valueHolder = new ValueHolder(stringLiteralType);
+    valueHolder->as<StringLiteralRepr>() = StringLiteralRepr::get(identifier);
+    return new StaticExpr(new ObjectExpr(valueHolder.ptr()));
+
+}
+
 void desugarFieldRef(FieldRefPtr x, ModulePtr module) {
     if (x->expr->exprKind == FIELD_REF || x->expr->exprKind == NAME_REF) {
         ModulePtr m = dottedImportedModule(x.ptr(), module.ptr());
@@ -55,7 +63,12 @@ void desugarFieldRef(FieldRefPtr x, ModulePtr module) {
     }
     
     ExprListPtr args = new ExprList(x->expr);
-    args->add(new ObjectExpr(x->name.ptr()));
+
+    // orig
+    //args->add(new ObjectExpr(new StringLiteral(x->name)));
+    args->add(identifierPtrToStaticExpr(x->name->str).ptr());
+    //args->add(new StaticExpr(new StringLiteral(x->name)));
+
     CallPtr call = new Call(operator_expr_fieldRef(), args);
     call->location = x->location;
     x->desugared = call.ptr();
@@ -418,9 +431,20 @@ llvm::ArrayRef<StatementPtr> desugarEvalStatement(EvalStatementPtr eval, EnvPtr 
     if (eval->evaled)
         return eval->value;
     else {
+        //llvm::errs() << "desugarEvalStatement " << eval->args << "\n";
         SourcePtr source = evalToSource(eval->location, eval->args, env);
+        //llvm::errs() << "source:<<<\n";
+        //llvm::errs() << source->dataString() << ">>>\n";
         parseStatements(source, 0, unsigned(source->size()), eval->value);
         eval->evaled = true;
+
+        for (vector<StatementPtr>::const_iterator stmt = eval->value.begin();
+                stmt != eval->value.end(); ++stmt)
+        {
+            //(*stmt)->print();
+        }
+        //llvm::errs() << "end of statements\n";
+
         return eval->value;
     }
 }

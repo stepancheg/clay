@@ -514,12 +514,12 @@ alias overload ifExpression(#true, consequent, alternate) = forward consequent;
 alias overload ifExpression(#false, consequent, alternate) = forward alternate;
 
 
-[consequent, alternate when StringLiteral?(consequent) and StringLiteral?(alternate)]
+[consequent, alternate when StringLiteral?(#consequent) and StringLiteral?(#alternate)]
 alias overload ifExpression(condition, #consequent, #alternate) --> ret:StringLiteralRef {
     if (condition)
-        ret <-- StringLiteralRef(consequent);
+        ret <-- StringLiteralRef(#consequent);
     else
-        ret <-- StringLiteralRef(alternate);
+        ret <-- StringLiteralRef(#alternate);
 }
 
 /// @section  asExpression 
@@ -578,6 +578,7 @@ overload PrimitiveType?(#Imag80) : Bool = true;
 overload PrimitiveType?(#Complex32) : Bool = true;
 overload PrimitiveType?(#Complex64) : Bool = true;
 overload PrimitiveType?(#Complex80) : Bool = true;
+overload PrimitiveType?(#StringLiteral) : Bool = true;
 [T] overload PrimitiveType?(#Pointer[T]) : Bool = true;
 [I, O] overload PrimitiveType?(#CodePointer[I, O]) : Bool = true;
 [C, V, I, O] overload PrimitiveType?(#ExternalCodePointer[C, V, I, O]) : Bool = true;

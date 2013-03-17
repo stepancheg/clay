@@ -13,7 +13,7 @@ overload observeTo(stream, forward ..x) {
     flush(stream);
     return forward ..forwardValues(captured);
 }
-[tag when StringLiteral?(tag)]
+[tag when StringLiteral?(#tag)]
 overload observeTo(stream, #tag, forward ..x) {
     var captured = captureValues(..x);
     printlnTo(stream, "[observed ", tag, ": ", ..weaveValues(", ", ..capturedRefs(captured)), "]");

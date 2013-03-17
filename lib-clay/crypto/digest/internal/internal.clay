@@ -22,7 +22,7 @@ overload Digest?(T) = false;
 define Algorithm(#T);
 
 // hash size in bytes
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define DigestSize(#A): UInt;
 
 // true iff T is digest compute context
@@ -33,57 +33,57 @@ overload DigestContext?(T) = false;
 
 // Hash function input block size. This function is a part of public API
 // because some algorithms (like HMAC) need to know it
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define BlockSizeBytes(#A): UInt;
 
 // digest type by algorithm name
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define Digest(#A);
 
 // digest context type by algorithm name
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define DigestContext(#A);
 
 // digest internal word
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define Word(#A);
 
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define WordIsBigEndian?(#A): Bool;
 
 // number of words in computation state
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define StateSizeWords(#A): Int;
 
 // algorithm internal state
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 State(#A) = Array[Word(#A), StateSizeWords(#A)];
 
 // initial data for state
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define stateInitial(#A): State(#A);
 
 // digest update block size in words
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define BlockSizeWords(#A);
 
 // block size in bytes
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 overload BlockSizeBytes(#A): UInt = UInt(BlockSizeWords(#A) * TypeSize(Word(#A)));
 
 // shortcut
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 BlockBytes(#A) = Array[UInt8, Int(BlockSizeBytes(#A))];
 
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define BitCountWord(#A);
 
 // core of the algorithm
-[A, S, B when Algorithm?(A) and S == State(#A) and B == BlockSizeBytes(#A)]
+[A, S, B when Algorithm?(#A) and S == State(#A) and B == BlockSizeBytes(#A)]
 define processBlock(#A, state: S, block: Array[UInt8, B]):;
 
 // make digest output record
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 MakeDigest(#A) = recordWithProperties(
         [
             [Digest?, #true],
@@ -94,17 +94,17 @@ MakeDigest(#A) = recordWithProperties(
     );
 
 // get digest and context by algorith name
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 define AlgorithmTypes(#A);
 
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 overload Digest(#A) = nthValue(#0, ..AlgorithmTypes(#A));
 
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 overload DigestContext(#A) = nthValue(#1, ..AlgorithmTypes(#A));
 
 // make digest context record
-[A when Algorithm?(A)]
+[A when Algorithm?(#A)]
 MakeDigestContext(#A) = recordWithProperties(
         [
             [DigestContext?, #true],
@@ -119,7 +119,7 @@ MakeDigestContext(#A) = recordWithProperties(
 [C when DigestContext?(C)]
 overload C() --> returned:C {
     returned.total <-- 0ul;
-    returned.state <-- stateInitial(Algorithm(C));
+    returned.state <-- stateInitial(#Algorithm(C));
     // returned.buffer does not need to be initialized
 }
 
@@ -207,8 +207,8 @@ overload PoorManUInt128(i: UInt64) --> returned:PoorManUInt128 {
 
 /// generic digestFinish. Works for SHA-2, MD5 and probably something else
 
-[A when Algorithm?(A)]
-private var padding[A] = array(0x80uss, ..replicateValue(0uss, #Int(2 * BlockSizeBytes(A) - 1)));
+[A when Algorithm?(#A)]
+private var padding[A] = array(0x80uss, ..replicateValue(0uss, #Int(2 * BlockSizeBytes(#A) - 1)));
 
 [I, B when Integer?(I)]
 private define hostToByteOrder(n:I, #B): I;
@@ -264,27 +264,27 @@ digestUpdate(context: C, input: S) {
 // finish and return computed sum
 // context cannot be reused after computation
 [C when DigestContext?(C)]
-digestFinishGeneric(context: C) --> returned: Digest(Algorithm(C)) {
+digestFinishGeneric(context: C) --> returned: Digest(#Algorithm(C)) {
     alias A = Algorithm(C);
-    alias BS = BlockSizeBytes(A);
-    alias BC = BitCountWord(A);
+    alias BS = BlockSizeBytes(#A);
+    alias BC = BitCountWord(#A);
     alias BCS = Int(TypeSize(BC));
     
     var total = context.total;
     
-    alias paddingForThis = padding[A];
+    alias paddingForThis = padding[#A];
 
     var last = total % BS;
     var padn = if (last < BS - BCS) BS - BCS - last else 2 * BS - BCS - last;
     digestUpdate(context, coordinateRange(begin(paddingForThis), begin(paddingForThis) + padn));
 
     var msglen = Union[Array[UInt8, BCS], BC]();
-    msglen.1 = hostToByteOrder(BC(total * 8), #WordIsBigEndian?(A));
+    msglen.1 = hostToByteOrder(BC(total * 8), #WordIsBigEndian?(#A));
     digestUpdate(context, msglen.0);
 
     assert(context.total % BS == 0);
 
-    returned.digest = wordsToBytes(context.state, #WordIsBigEndian?(A));
+    returned.digest = wordsToBytes(context.state, #WordIsBigEndian?(#A));
 }
 
 

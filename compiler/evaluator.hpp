@@ -91,6 +91,8 @@ EValuePtr evalAllocValue(TypePtr t);
 
 EValuePtr evalOneAsRef(ExprPtr expr, EnvPtr env);
 
+llvm::StringRef objectStringLiteralToStringRef(Object* obj, unsigned index);
+
 }
 
 #endif // __EVALUATOR_HPP

@@ -5,10 +5,10 @@ import test.*;
 
 main() = testMain(TestSuite("string literals", array(
         TestCase("stringLiteralStartsWith?", -> {
-            expectTrue(stringLiteralStartsWith?("foobar", "foo"));
-            expectFalse(stringLiteralStartsWith?("foobar", "bar"));
-            expectTrue(stringLiteralStartsWith?("foobar", "foobar"));
-            expectFalse(stringLiteralStartsWith?("foo", "foobar"));
+            expectTrue(unwrapStatic(#stringLiteralStartsWith?("foobar", "foo")));
+            expectFalse(unwrapStatic(#stringLiteralStartsWith?("foobar", "bar")));
+            expectTrue(unwrapStatic(#stringLiteralStartsWith?("foobar", "foobar")));
+            expectFalse(unwrapStatic(#stringLiteralStartsWith?("foo", "foobar")));
         }),
         TestCase("stringLiteralEndsWith?", -> {
             expectFalse(stringLiteralEndsWith?("foobar", "foo"));

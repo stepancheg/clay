@@ -374,8 +374,10 @@ ObjectPtr lookupEnv(EnvPtr env, llvm::StringRef name) {
 
 ObjectPtr safeLookupEnv(EnvPtr env, llvm::StringRef name) {
     ObjectPtr obj = lookupEnv(env, name);
-    if (obj == NULL)
+    if (obj == NULL) {
+        env->print();
         undefinedNameError(name);
+    }
     return obj;
 }
 

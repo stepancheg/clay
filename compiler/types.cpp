@@ -9,6 +9,7 @@
 #include "loader.hpp"
 #include "env.hpp"
 #include "objects.hpp"
+#include "string_literal.hpp"
 #include "error.hpp"
 
 
@@ -41,6 +42,8 @@ TypePtr complex80Type;
 TypePtr cIntType;
 TypePtr cSizeTType;
 TypePtr cPtrDiffTType;
+
+TypePtr stringLiteralType;
 
 static vector<vector<PointerTypePtr> > pointerTypes;
 static vector<vector<CodePointerTypePtr> > codePointerTypes;
@@ -108,6 +111,7 @@ void initTypes() {
     complex32Type = new ComplexType(32);
     complex64Type = new ComplexType(64);
     complex80Type = new ComplexType(80);
+    stringLiteralType = new StringLiteralType();
 
     cIntType = int32Type;
     switch (llvmDataLayout->getPointerSizeInBits()) {
@@ -393,6 +397,8 @@ TypePtr variantType(VariantDeclPtr variant, llvm::ArrayRef<ObjectPtr> params) {
 
 TypePtr staticType(ObjectPtr obj)
 {
+    assert(obj->objKind != IDENTIFIER);
+
     unsigned h = objectHash(obj);
     h &= unsigned(staticTypes.size() - 1);
     vector<StaticTypePtr> &bucket = staticTypes[h];
@@ -582,9 +588,15 @@ static bool unpackField(TypePtr x, IdentifierPtr &name, TypePtr &type) {
     if (tt->elementTypes[0]->typeKind != STATIC_TYPE)
         return false;
     StaticType *st0 = (StaticType *)tt->elementTypes[0].ptr();
-    if (st0->obj->objKind != IDENTIFIER)
+    if (st0->obj->objKind != VALUE_HOLDER)
         return false;
-    name = (Identifier *)st0->obj.ptr();
+
+    ValueHolder* nameValueHolder = (ValueHolder*) st0->obj.ptr();
+    if (nameValueHolder->type->typeKind != STRING_LITERAL_TYPE)
+        return false;
+
+    name = Identifier::get(nameValueHolder->as<StringLiteralRepr>().stringRef());
+
     if (tt->elementTypes[1]->typeKind != STATIC_TYPE)
         return false;
     StaticType *st1 = (StaticType *)tt->elementTypes[1].ptr();
@@ -628,7 +640,7 @@ static ExprPtr convertStaticObjectToExpr(TypePtr t) {
         return new Tuple(exprs);
     }
     else {
-        error("non-static value found in object property");
+        fmtError("non-static value found in object property: %s", t->toString().c_str());
         return NULL;
     }
 }
@@ -659,6 +671,8 @@ static void setProperties(TypePtr type, llvm::ArrayRef<TypePtr> props) {
         setProperty(type, props[i]);
 }
 
+void bp() {}
+
 void initializeRecordFields(RecordTypePtr t) {
     CompileContextPusher pusher(t.ptr());
 
@@ -674,6 +688,11 @@ void initializeRecordFields(RecordTypePtr t) {
             rest->add(t->params[i]);
         addLocal(env, r->varParam, rest.ptr());
     }
+
+    if (!t->params.empty() && t->params[0]->toString().find("zzz") != string::npos) {
+        bp();
+    }
+
 
     evaluatePredicate(r->patternVars, r->predicate, env);
 
@@ -1150,6 +1169,13 @@ static void declareLLVMType(TypePtr t) {
         }
         break;
     }
+    case STRING_LITERAL_TYPE : {
+        //vector<llvm::Type *> llTypes;
+        //llTypes.push_back(llvmType(pointerType(cSizeTType)));
+        //t->llType = llvm::StructType::create(llvm::getGlobalContext(), llTypes, typeName(t));
+        t->llType = llvmType(pointerType(cSizeTType));
+        break;
+    }
     case POINTER_TYPE : {
         PointerType *x = (PointerType *)t.ptr();
         t->llType = llvmPointerType(x->pointeeType);
@@ -1388,6 +1414,7 @@ static void defineLLVMType(TypePtr t) {
     case INTEGER_TYPE :
     case FLOAT_TYPE :
     case COMPLEX_TYPE :
+    case STRING_LITERAL_TYPE :
     case POINTER_TYPE :
     case CODE_POINTER_TYPE :
     case CCODE_POINTER_TYPE :

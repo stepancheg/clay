@@ -4,6 +4,8 @@
 #include "loader.hpp"
 #include "patterns.hpp"
 #include "objects.hpp"
+#include "string_literal.hpp"
+#include "evaluator_op.hpp"
 
 
 #pragma clang diagnostic ignored "-Wcovered-switch-default"
@@ -878,6 +880,20 @@ void printNameList(llvm::raw_ostream &out, llvm::ArrayRef<ObjectPtr> x)
         if (i != 0)
             out << ", ";
         printName(out, x[i]);
+        {
+            string s;
+            llvm::raw_string_ostream os(s);
+            printName(os, x[i]);
+            if (os.str().empty()) {
+                assert(x[i]->objKind == VALUE_HOLDER);
+                ValueHolder* vh = (ValueHolder*) x[i].ptr();
+                llvm::errs() << "got empty\n";
+                printName(llvm::errs(), vh);
+                llvm::errs() << "\n";
+                llvm::errs() << vh << "\n";
+                abort();
+            }
+        }
     }
 }
 
@@ -940,12 +956,23 @@ static bool isSafe(char ch)
 void printStaticName(llvm::raw_ostream &out, ObjectPtr x)
 {
     if (x->objKind == IDENTIFIER) {
+        // TODO: not sure useful
+        abort();
         Identifier *y = (Identifier *)x.ptr();
         out << y->str;
+        return;
     }
-    else {
-        printName(out, x);
+
+    if (x->objKind == VALUE_HOLDER) {
+        ValueHolder* valueHolder = (ValueHolder*) x.ptr();
+
+        if (valueHolder->type->typeKind == STRING_LITERAL_TYPE) {
+            out << valueHolder->as<StringLiteralRepr>().stringRef();
+            return;
+        }
     }
+
+    printName(out, x);
 }
 
 void printName(llvm::raw_ostream &out, ObjectPtr x)
@@ -1053,7 +1080,11 @@ void printName(llvm::raw_ostream &out, ObjectPtr x)
     }
     case VALUE_HOLDER : {
         ValueHolder *y = (ValueHolder *)x.ptr();
-        if (isStaticOrTupleOfStatics(y->type)) {
+        if (y->type->typeKind == STRING_LITERAL_TYPE) {
+            // TODO: hack
+            printName(out, Identifier::get(y->as<StringLiteralRepr>().stringRef()));
+        }
+        else if (false && isStaticOrTupleOfStatics(y->type)) {
             printStaticOrTupleOfStatics(out, y->type);
         }
         else {
@@ -1183,7 +1214,29 @@ void printValue(llvm::raw_ostream &out, EValuePtr ev)
         }
         break;
     }
+    case STRING_LITERAL_TYPE : {
+        // TODO: escape
+        out << '"' << ev->as<StringLiteralRepr>().stringRef() << '"';
+        break;
+    }
+    case TUPLE_TYPE : {
+        TupleType *t = (TupleType*) ev->type.ptr();
+        out << "[";
+        for (int i = 0; i < t->elementTypes.size(); ++i) {
+            if (i != 0)
+                out << ", ";
+            printValue(out, new EValue(tupleRef(ev.ptr(), i)));
+        }
+        out << "]";
+        break;
+    }
+    case STATIC_TYPE : {
+        StaticType* staticType = (StaticType*) ev->type.ptr();
+        out << "#" << staticType->obj;
+        break;
+    }
     default :
+        out << "value of type " << ev->type->typeKind;
         break;
     }
 }
@@ -1274,6 +1327,10 @@ void typePrint(llvm::raw_ostream &out, TypePtr t) {
     case COMPLEX_TYPE : {
         ComplexType *x = (ComplexType *)t.ptr();
         out << "Complex" << x->bits;
+        break;
+    }
+    case STRING_LITERAL_TYPE : {
+        out << "StringLiteral";
         break;
     }
     case POINTER_TYPE : {

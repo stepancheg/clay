@@ -9,6 +9,7 @@
 #include "constructors.hpp"
 #include "externals.hpp"
 #include "env.hpp"
+#include "string_literal.hpp"
 
 #include "codegen_op.hpp"
 
@@ -20,7 +21,6 @@ static llvm::StringMap<llvm::Constant*> stringTableConstants;
 
 
 
-//
 // valueToStatic, valueToStaticSizeTOrInt
 // valueToType, valueToNumericType, valueToIntegerType,
 // valueToPointerLikeType, valueToTupleType, valueToRecordType,
@@ -139,12 +139,18 @@ static EnumTypePtr valueToEnumType(MultiCValuePtr args, unsigned index)
     return (EnumType *)t.ptr();
 }
 
-static llvm::StringRef valueToStringRef(MultiCValuePtr args, unsigned index)
+static llvm::StringRef valueStaticToStringRef(MultiCValuePtr args, unsigned index)
 {
     ObjectPtr obj = valueToStatic(args->values[index]);
-    if (!obj || (obj->objKind != IDENTIFIER))
-        argumentError(index, "expecting identifier value");
-    return ((Identifier *)obj.ptr())->str;
+    //if (!obj || (obj->objKind != IDENTIFIER))
+    if (!!obj && (obj->objKind == VALUE_HOLDER)) {
+        ValueHolder* valueHolder = (ValueHolder*) obj.ptr();
+        if (valueHolder->type->typeKind == STRING_LITERAL_TYPE) {
+            return valueHolder->as<StringLiteralRepr>().stringRef();
+        }
+    }
+    argumentError(index, "expecting identifier value");
+    throw 1;
 }
 
 
@@ -443,7 +449,7 @@ llvm::AtomicRMWInst::BinOp atomicRMWOpValue(MultiCValuePtr args, unsigned index)
 // codegenPrimOp
 //
 
-static llvm::Constant *codegenStringTableConstant(llvm::StringRef s)
+llvm::Constant *codegenStringTableConstant(llvm::StringRef s)
 {
     llvm::StringMap<llvm::Constant*>::const_iterator oldConstant = stringTableConstants.find(s);
     if (oldConstant != stringTableConstants.end())
@@ -1708,7 +1714,7 @@ void codegenPrimOp(PrimOpPtr x,
         if (i >= fieldNames.size())
             argumentIndexRangeError(1, "record field index",
                                     i, fieldNames.size());
-        codegenStaticObject(Identifier::get(fieldNames[i]), ctx, out);
+        //codegenStaticObject(Identifier::get(fieldNames[i]), ctx, out);
         break;
     }
 
@@ -1716,7 +1722,7 @@ void codegenPrimOp(PrimOpPtr x,
         ensureArity(args, 2);
         bool result = false;
         ObjectPtr obj = valueToStatic(args->values[0]);
-        llvm::StringRef fname = valueToStringRef(args, 1);
+        llvm::StringRef fname = valueStaticToStringRef(args, 1);
         if (obj.ptr() && (obj->objKind == TYPE)) {
             Type *t = (Type *)obj.ptr();
             if (t->typeKind == RECORD_TYPE) {
@@ -1774,7 +1780,7 @@ void codegenPrimOp(PrimOpPtr x,
         ensureArity(args, 2);
         RecordTypePtr rt;
         llvm::Value *vrec = recordValue(args, 0, rt);
-        llvm::StringRef fname = valueToStringRef(args, 1);
+        llvm::StringRef fname = valueStaticToStringRef(args, 1);
         const llvm::StringMap<size_t> &fieldIndexMap = recordFieldIndexMap(rt);
         llvm::StringMap<size_t>::const_iterator fi =
             fieldIndexMap.find(fname);
@@ -1949,7 +1955,7 @@ void codegenPrimOp(PrimOpPtr x,
         if (moduleObj->objKind != MODULE)
             argumentError(0, "expecting a module");
         Module *module = (Module *)moduleObj.ptr();
-        llvm::StringRef ident = valueToStringRef(args, 1);
+        llvm::StringRef ident = valueStaticToStringRef(args, 1);
         ObjectPtr obj = safeLookupPublic(module, ident);
         codegenStaticObject(obj, ctx, out);
         break;
@@ -2010,7 +2016,11 @@ void codegenPrimOp(PrimOpPtr x,
         CValuePtr cv0 = args->values[0];
         if (cv0->type->typeKind == STATIC_TYPE) {
             StaticType *st = (StaticType *)cv0->type.ptr();
-            result = (st->obj->objKind == IDENTIFIER);
+            //result = (st->obj->objKind == IDENTIFIER);
+            if (st->obj->objKind == VALUE_HOLDER) {
+                ValueHolder* valueHolder = (ValueHolder*) st->obj.ptr();
+                result = valueHolder->type->typeKind == STRING_LITERAL_TYPE;
+            }
         }
         ValueHolderPtr vh = boolToValueHolder(result);
         codegenStaticObject(vh.ptr(), ctx, out);
@@ -2019,7 +2029,7 @@ void codegenPrimOp(PrimOpPtr x,
 
     case PRIM_stringLiteralByteIndex : {
         ensureArity(args, 2);
-        llvm::StringRef ident = valueToStringRef(args, 0);
+        llvm::StringRef ident = valueStaticToStringRef(args, 0);
         unsigned n = unsigned(valueToStaticSizeTOrInt(args, 1));
         if (n >= ident.size())
             argumentError(1, "string literal index out of bounds");
@@ -2034,7 +2044,7 @@ void codegenPrimOp(PrimOpPtr x,
 
     case PRIM_stringLiteralBytes : {
         ensureArity(args, 1);
-        llvm::StringRef ident = valueToStringRef(args, 0);
+        llvm::StringRef ident = valueStaticToStringRef(args, 0);
         assert(out->size() == ident.size());
         for (unsigned i = 0; i < ident.size(); ++i) {
             CValuePtr outi = out->values[i];
@@ -2047,20 +2057,28 @@ void codegenPrimOp(PrimOpPtr x,
 
     case PRIM_stringLiteralByteSize : {
         ensureArity(args, 1);
-        llvm::StringRef ident = valueToStringRef(args, 0);
+        llvm::StringRef ident = valueStaticToStringRef(args, 0);
         ValueHolderPtr vh = sizeTToValueHolder(ident.size());
         codegenStaticObject(vh.ptr(), ctx, out);
         break;
     }
 
-    case PRIM_stringLiteralByteSlice :
+    case PRIM_stringLiteralByteSlice : {
+        string s;
+        llvm::raw_string_ostream os(s);
+        os << "function " << primOpName(x) << " is eval only";
+        os.flush();
+        error(s);
+        break;
+    }
+
     case PRIM_stringLiteralConcat :
     case PRIM_stringLiteralFromBytes :
         break;
 
     case PRIM_stringTableConstant : {
         ensureArity(args, 1);
-        llvm::StringRef ident = valueToStringRef(args, 0);
+        llvm::StringRef ident = valueStaticToStringRef(args, 0);
         llvm::Value *value = codegenStringTableConstant(ident);
 
         assert(out->size() == 1);
@@ -2072,7 +2090,7 @@ void codegenPrimOp(PrimOpPtr x,
 
     case PRIM_FlagP : {
         ensureArity(args, 1);
-        llvm::StringRef ident = valueToStringRef(args, 0);
+        llvm::StringRef ident = valueStaticToStringRef(args, 0);
         llvm::StringMap<string>::const_iterator flag = globalFlags.find(ident);
         ValueHolderPtr vh = boolToValueHolder(flag != globalFlags.end());
         codegenStaticObject(vh.ptr(), ctx, out);
