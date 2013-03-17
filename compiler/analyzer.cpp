@@ -99,8 +99,10 @@ static TypePtr objectType(ObjectPtr x)
     case RECORD_DECL :
     case VARIANT_DECL :
     case MODULE :
-    case IDENTIFIER :
         return staticType(x);
+    case IDENTIFIER :
+        abort();
+        break;
 
     default :
         error("untypeable object");
@@ -496,8 +498,6 @@ MultiPValuePtr analyzeArgExpr(ExprPtr x,
 // analyzeExpr
 //
 
-static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env);
-
 void appendArgString(Expr *expr, string *outString)
 {
     ForeignExpr *fexpr;
@@ -519,6 +519,30 @@ notAlias:
     error("__ARG__ may only be applied to an alias value or alias function argument");
 }
 
+
+PVData analyzeIdentiferToStaticStringLiteral(Identifier* identifier) {
+    return PVData(identifierToStaticStringLiteralType(identifier), true);
+}
+
+PVData analyzeStringToStaticStringLiteral(llvm::StringRef string) {
+    return analyzeIdentiferToStaticStringLiteral(Identifier::get(string));
+}
+
+Identifier* typeToStaticStringLiteral(Type* type) {
+    if (type->typeKind != STATIC_TYPE)
+        return NULL;
+    StaticType* staticType = (StaticType*) type;
+    if (staticType->obj->objKind != VALUE_HOLDER)
+        return NULL;
+    ValueHolder* valueHolder = (ValueHolder*) staticType->obj.ptr();
+    if (valueHolder->type->typeKind != STRING_LITERAL_TYPE)
+        return NULL;
+    return valueHolder->as<Identifier*>();
+}
+
+static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env);
+static MultiPValuePtr analyzeExpr3(ExprPtr expr, EnvPtr env);
+
 MultiPValuePtr analyzeExpr(ExprPtr expr, EnvPtr env)
 {
     if (analysisCachingDisabled > 0)
@@ -529,6 +553,20 @@ MultiPValuePtr analyzeExpr(ExprPtr expr, EnvPtr env)
 }
 
 static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
+{
+    MultiPValuePtr analysis = analyzeExpr3(expr, env);
+#if 0
+    for (int i = 0; i < analysis->values.size(); ++i) {
+        PVData& pvData = analysis->values[i];
+        if (pvData.type->typeKind == STRING_LITERAL_TYPE) {
+            error("value of type StringLiteral are not supported");
+        }
+    }
+#endif
+    return analysis;
+}
+
+static MultiPValuePtr analyzeExpr3(ExprPtr expr, EnvPtr env)
 {
     LocationContext loc(expr->location);
     switch (expr->exprKind) {
@@ -558,7 +596,9 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
 
     case STRING_LITERAL : {
         StringLiteral *x = (StringLiteral *)expr.ptr();
-        return new MultiPValue(staticPValue(x->value.ptr()));
+        ValueHolderPtr v = new ValueHolder(stringLiteralType);
+        v->as<Identifier*>() = x->value.ptr();
+        return new MultiPValue(staticPValue(v.ptr()));
     }
 
     case NAME_REF : {
@@ -578,7 +618,8 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
     case FILE_EXPR : {
         Location location = safeLookupCallByNameLocation(env);
         string filename = location.source->fileName;
-        return analyzeStaticObject(Identifier::get(filename));
+        //return analyzeStaticObject(Identifier::get(filename));
+        return new MultiPValue(analyzeStringToStaticStringLiteral(filename));
     }
 
     case LINE_EXPR : {
@@ -610,7 +651,8 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
                 appendArgString(expr, &argString);
             }
         }
-        return analyzeStaticObject(Identifier::get(argString));
+        //return analyzeStaticObject(Identifier::get(argString));
+        return new MultiPValue(analyzeStringToStaticStringLiteral(argString));
     }
 
     case TUPLE : {
@@ -832,8 +874,7 @@ MultiPValuePtr analyzeStaticObject(ObjectPtr x)
     case PRIM_OP :
     case PROCEDURE :
     case MODULE :
-    case INTRINSIC :
-    case IDENTIFIER : {
+    case INTRINSIC : {
         TypePtr t = staticType(x);
         return new MultiPValue(PVData(t, true));
     }
@@ -1082,9 +1123,19 @@ void verifyAttributes(ExternalProcedurePtr x)
             break;
         }
         case IDENTIFIER : {
+            abort();
             Identifier *y = (Identifier *)obj.ptr();
             x->attrAsmLabel = y->str;
             break;
+        }
+        case VALUE_HOLDER : {
+            ValueHolder* vh = (ValueHolder*) obj.ptr();
+            if (vh->type->typeKind == STRING_LITERAL_TYPE) {
+                Identifier *y = (Identifier *) vh->as<Identifier*>();
+                x->attrAsmLabel = y->str;
+                break;
+            }
+            // fallthrough
         }
         default: {
             string buf;
@@ -1169,6 +1220,7 @@ void verifyAttributes(ModulePtr mod)
                 break;
             }
             case IDENTIFIER: {
+                abort();
                 Identifier *y = (Identifier *)obj.ptr();
                 mod->attrBuildFlags.push_back(y->str);
                 break;
@@ -1241,7 +1293,7 @@ MultiPValuePtr analyzeIndexingExpr(ExprPtr indexable,
             return analyzeGVarInstance(y);
         }
         if (obj->objKind != VALUE_HOLDER && obj->objKind != IDENTIFIER)
-            error("invalid indexing operation");
+            abort();
     }
     ExprListPtr args2 = new ExprList(indexable);
     args2->add(args);

@@ -20,7 +20,6 @@ static llvm::StringMap<llvm::Constant*> stringTableConstants;
 
 
 
-//
 // valueToStatic, valueToStaticSizeTOrInt
 // valueToType, valueToNumericType, valueToIntegerType,
 // valueToPointerLikeType, valueToTupleType, valueToRecordType,
@@ -142,9 +141,15 @@ static EnumTypePtr valueToEnumType(MultiCValuePtr args, unsigned index)
 static IdentifierPtr valueToIdentifier(MultiCValuePtr args, unsigned index)
 {
     ObjectPtr obj = valueToStatic(args->values[index]);
-    if (!obj || (obj->objKind != IDENTIFIER))
-        argumentError(index, "expecting identifier value");
-    return (Identifier *)obj.ptr();
+    //if (!obj || (obj->objKind != IDENTIFIER))
+    if (!!obj && (obj->objKind == VALUE_HOLDER)) {
+        ValueHolder* valueHolder = (ValueHolder*) obj.ptr();
+        if (valueHolder->type->typeKind == STRING_LITERAL_TYPE) {
+            return valueHolder->as<Identifier*>();
+        }
+    }
+    argumentError(index, "expecting identifier value");
+    throw 1;
 }
 
 
@@ -2010,7 +2015,11 @@ void codegenPrimOp(PrimOpPtr x,
         CValuePtr cv0 = args->values[0];
         if (cv0->type->typeKind == STATIC_TYPE) {
             StaticType *st = (StaticType *)cv0->type.ptr();
-            result = (st->obj->objKind == IDENTIFIER);
+            //result = (st->obj->objKind == IDENTIFIER);
+            if (st->obj->objKind == VALUE_HOLDER) {
+                ValueHolder* valueHolder = (ValueHolder*) st->obj.ptr();
+                result = valueHolder->type->typeKind == STRING_LITERAL_TYPE;
+            }
         }
         ValueHolderPtr vh = boolToValueHolder(result);
         codegenStaticObject(vh.ptr(), ctx, out);

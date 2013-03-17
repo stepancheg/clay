@@ -131,6 +131,14 @@ MultiPValuePtr analyzeCallByName(InvokeEntry* entry,
 
 void analyzeCodeBody(InvokeEntry* entry);
 
+TypePtr identifierToStaticStringLiteralType(Identifier* identifier);
+Identifier* typeToStaticStringLiteral(Type* type);
+
+PVData analyzeIdentiferToStaticStringLiteral(Identifier* identifier);
+PVData analyzeStringToStaticStringLiteral(llvm::StringRef string);
+
+
+
 struct AnalysisContext {
     vector<uint8_t> returnIsRef;
     vector<TypePtr> returnTypes;

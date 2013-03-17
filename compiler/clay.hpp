@@ -722,6 +722,8 @@ struct Source : public Object {
     const char *endData() const { return buffer->getBufferEnd(); }
     size_t size() const { return buffer->getBufferSize(); }
 
+    llvm::StringRef dataString() const { return llvm::StringRef(data(), endData() - data()); }
+
     llvm::DIFile getDebugInfo() const { return llvm::DIFile(debugInfo); }
 };
 
@@ -1191,7 +1193,10 @@ struct ForeignExpr : public Expr {
 struct ObjectExpr : public Expr {
     ObjectPtr obj;
     ObjectExpr(ObjectPtr obj)
-        : Expr(OBJECT_EXPR), obj(obj) {}
+        : Expr(OBJECT_EXPR), obj(obj) {
+        assert(obj->objKind != IDENTIFIER);
+        assert(obj->objKind != EXPRESSION);
+    }
 };
 
 struct EvalExpr : public Expr {
@@ -2430,6 +2435,7 @@ enum TypeKind {
     INTEGER_TYPE,
     FLOAT_TYPE,
     COMPLEX_TYPE,
+    STRING_LITERAL_TYPE,
     POINTER_TYPE,
     CODE_POINTER_TYPE,
     CCODE_POINTER_TYPE,
@@ -2498,6 +2504,11 @@ struct ComplexType : public Type {
     unsigned bits:15;
     ComplexType(unsigned bits)
         : Type(COMPLEX_TYPE), layout(NULL), bits(bits) {}
+};
+
+struct StringLiteralType : public Type {
+    StringLiteralType()
+        : Type(STRING_LITERAL_TYPE) {}
 };
 
 struct PointerType : public Type {
@@ -2623,7 +2634,9 @@ struct VariantType : public Type {
 struct StaticType : public Type {
     ObjectPtr obj;
     StaticType(ObjectPtr obj)
-        : Type(STATIC_TYPE), obj(obj) {}
+        : Type(STATIC_TYPE), obj(obj) {
+        assert(obj->objKind != IDENTIFIER);
+    }
 };
 
 struct EnumType : public Type {
