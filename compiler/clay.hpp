@@ -442,7 +442,8 @@ struct Object {
     virtual ~Object() {}
 
     // print to stderr, for debugging
-    virtual void print() const;
+    virtual string toString() const;
+    void print() const;
 };
 
 typedef Pointer<Object> ObjectPtr;
@@ -773,6 +774,8 @@ struct Source : public Object {
     const char *data() const { return buffer->getBufferStart(); }
     const char *endData() const { return buffer->getBufferEnd(); }
     size_t size() const { return buffer->getBufferSize(); }
+
+    llvm::StringRef dataString() const { return llvm::StringRef(data(), endData() - data()); }
 
     llvm::DIFile getDebugInfo() const { return llvm::DIFile(debugInfo); }
 };
@@ -1243,7 +1246,10 @@ struct ForeignExpr : public Expr {
 struct ObjectExpr : public Expr {
     ObjectPtr obj;
     ObjectExpr(ObjectPtr obj)
-        : Expr(OBJECT_EXPR), obj(obj) {}
+        : Expr(OBJECT_EXPR), obj(obj) {
+        assert(obj->objKind != IDENTIFIER);
+        assert(obj->objKind != EXPRESSION);
+    }
 };
 
 struct EvalExpr : public Expr {
@@ -2462,8 +2468,6 @@ struct Env : public Object {
         : Object(ENV), parent(parent.ptr()), exceptionAvailable(false) {}
     Env(EnvPtr parent, bool exceptionAvailable = false)
         : Object(ENV), parent(parent.ptr()), exceptionAvailable(exceptionAvailable) {}
-
-    void print() const;
 };
 
 
@@ -2484,6 +2488,7 @@ enum TypeKind {
     INTEGER_TYPE,
     FLOAT_TYPE,
     COMPLEX_TYPE,
+    STRING_LITERAL_TYPE,
     POINTER_TYPE,
     CODE_POINTER_TYPE,
     CCODE_POINTER_TYPE,
@@ -2552,6 +2557,11 @@ struct ComplexType : public Type {
     unsigned bits:15;
     ComplexType(unsigned bits)
         : Type(COMPLEX_TYPE), layout(NULL), bits(bits) {}
+};
+
+struct StringLiteralType : public Type {
+    StringLiteralType()
+        : Type(STRING_LITERAL_TYPE) {}
 };
 
 struct PointerType : public Type {
@@ -2677,7 +2687,10 @@ struct VariantType : public Type {
 struct StaticType : public Type {
     ObjectPtr obj;
     StaticType(ObjectPtr obj)
-        : Type(STATIC_TYPE), obj(obj) {}
+        : Type(STATIC_TYPE), obj(obj) {
+        //llvm::errs() << obj.ptr() << "\n";
+        assert(obj->objKind != IDENTIFIER);
+    }
 };
 
 struct EnumType : public Type {

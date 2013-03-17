@@ -3,7 +3,8 @@ import test.(TestSuite, TestCase, TestStatus, testMain);
 
 private test?(mod, name) =
     stringLiteralStartsWith?(name, "TEST_")
-    and CallDefined?(staticFieldRef(mod, name));
+    //and CallDefined?(staticFieldRef(mod, name));
+    ;
 
 private xfail?(name) : Bool = stringLiteralStartsWith?(name, "TEST_XFAIL_");
 

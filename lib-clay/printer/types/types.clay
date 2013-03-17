@@ -543,9 +543,9 @@ overload printReprTo(stream, s:S) {
     printTo(stream, ')');
 }
 
-[S when StringLiteral?(S)]
+[S when StringLiteral?(#S)]
 overload printReprTo(stream, #S) {
-    printStringReprTo(stream, S);
+    printStringReprTo(stream, #S);
 }
 
 

@@ -47,8 +47,15 @@ bool _objectValueEquals(ObjectPtr a, ObjectPtr b)
     case VALUE_HOLDER : {
         ValueHolder *a1 = (ValueHolder *)a.ptr();
         ValueHolder *b1 = (ValueHolder *)b.ptr();
+
         if (a1->type != b1->type)
             return false;
+
+        if (a1->type->typeKind == STRING_LITERAL_TYPE) {
+            // TODO: hack
+            return a1->as<Identifier*>()->str == b1->as<Identifier*>()->str;
+        }
+
         size_t n = typeSize(a1->type);
         return memcmp(a1->buf, b1->buf, n) == 0;
     }

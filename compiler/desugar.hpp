@@ -6,6 +6,7 @@
 namespace clay {
 
 ExprPtr desugarCharLiteral(char c);
+StaticExprPtr identifierPtrToStaticExpr(Identifier* identifier);
 void desugarFieldRef(FieldRefPtr x, ModulePtr module);
 ExprPtr desugarStaticIndexing(StaticIndexingPtr x);
 ExprPtr desugarVariadicOp(VariadicOpPtr x);

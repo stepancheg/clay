@@ -648,8 +648,6 @@ MultiPValuePtr analyzeArgExpr(ExprPtr x,
 // analyzeExpr
 //
 
-static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env);
-
 void appendArgString(Expr *expr, string *outString)
 {
     ForeignExpr *fexpr;
@@ -671,6 +669,30 @@ notAlias:
     error("__ARG__ may only be applied to an alias value or alias function argument");
 }
 
+
+static PVData analyzeIdentiferToStaticStringLiteral(Identifier* identifier) {
+    return PVData(identifierToStaticStringLiteralType(identifier), true);
+}
+
+static PVData analyzeStringToStaticStringLiteral(llvm::StringRef string) {
+    return analyzeIdentiferToStaticStringLiteral(Identifier::get(string));
+}
+
+static Identifier* typeToStaticStringLiteral(Type* type) {
+    if (type->typeKind != STATIC_TYPE)
+        return NULL;
+    StaticType* staticType = (StaticType*) type;
+    if (staticType->obj->objKind != VALUE_HOLDER)
+        return NULL;
+    ValueHolder* valueHolder = (ValueHolder*) staticType->obj.ptr();
+    if (valueHolder->type->typeKind != STRING_LITERAL_TYPE)
+        return NULL;
+    return valueHolder->as<Identifier*>();
+}
+
+static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env);
+static MultiPValuePtr analyzeExpr3(ExprPtr expr, EnvPtr env);
+
 MultiPValuePtr analyzeExpr(ExprPtr expr, EnvPtr env)
 {
     if (analysisCachingDisabled > 0)
@@ -681,6 +703,20 @@ MultiPValuePtr analyzeExpr(ExprPtr expr, EnvPtr env)
 }
 
 static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
+{
+    MultiPValuePtr analysis = analyzeExpr3(expr, env);
+#if 0
+    for (int i = 0; i < analysis->values.size(); ++i) {
+        PVData& pvData = analysis->values[i];
+        if (pvData.type->typeKind == STRING_LITERAL_TYPE) {
+            error("value of type StringLiteral are not supported");
+        }
+    }
+#endif
+    return analysis;
+}
+
+static MultiPValuePtr analyzeExpr3(ExprPtr expr, EnvPtr env)
 {
     LocationContext loc(expr->location);
     switch (expr->exprKind) {
@@ -710,7 +746,9 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
 
     case STRING_LITERAL : {
         StringLiteral *x = (StringLiteral *)expr.ptr();
-        return new MultiPValue(staticPValue(x->value.ptr()));
+        ValueHolderPtr v = new ValueHolder(stringLiteralType);
+        v->as<Identifier*>() = x->value.ptr();
+        return new MultiPValue(staticPValue(v.ptr()));
     }
 
     case NAME_REF : {
@@ -730,7 +768,8 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
     case FILE_EXPR : {
         Location location = safeLookupCallByNameLocation(env);
         string filename = location.source->fileName;
-        return analyzeStaticObject(Identifier::get(filename));
+        //return analyzeStaticObject(Identifier::get(filename));
+        return new MultiPValue(analyzeStringToStaticStringLiteral(filename));
     }
 
     case LINE_EXPR : {
@@ -762,7 +801,8 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
                 appendArgString(expr, &argString);
             }
         }
-        return analyzeStaticObject(Identifier::get(argString));
+        //return analyzeStaticObject(Identifier::get(argString));
+        return new MultiPValue(analyzeStringToStaticStringLiteral(argString));
     }
 
     case TUPLE : {
@@ -984,8 +1024,7 @@ MultiPValuePtr analyzeStaticObject(ObjectPtr x)
     case PRIM_OP :
     case PROCEDURE :
     case MODULE :
-    case INTRINSIC :
-    case IDENTIFIER : {
+    case INTRINSIC : {
         TypePtr t = staticType(x);
         return new MultiPValue(PVData(t, true));
     }
@@ -1234,9 +1273,19 @@ void verifyAttributes(ExternalProcedurePtr x)
             break;
         }
         case IDENTIFIER : {
+            // TODO: dead code
             Identifier *y = (Identifier *)obj.ptr();
             x->attrAsmLabel = y->str;
             break;
+        }
+        case VALUE_HOLDER : {
+            ValueHolder* vh = (ValueHolder*) obj.ptr();
+            if (vh->type->typeKind == STRING_LITERAL_TYPE) {
+                Identifier *y = (Identifier *) vh->as<Identifier*>();
+                x->attrAsmLabel = y->str;
+                break;
+            }
+            // fallthrough
         }
         default: {
             string buf;
@@ -2976,6 +3025,12 @@ invokeEntryForCallableArguments(MultiPValuePtr args, unsigned callableIndex, uns
         analyzeCallable(callable, argsKey, argsTempness));
 }
 
+TypePtr identifierToStaticStringLiteralType(Identifier* identifier) {
+    ValueHolderPtr valueHolder = new ValueHolder(stringLiteralType);
+    valueHolder->as<Identifier*>() = identifier;
+    return staticType(valueHolder.ptr());
+}
+
 MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
 {
     switch (x->primOpCode) {
@@ -3306,7 +3361,7 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
         if (i >= fieldNames.size())
             argumentIndexRangeError(1, "record field index",
                                     i, fieldNames.size());
-        return new MultiPValue(staticPValue(fieldNames[i].ptr()));
+        return new MultiPValue(analyzeIdentiferToStaticStringLiteral(fieldNames[i].ptr()));
     }
 
     case PRIM_RecordWithFieldP :
@@ -3340,9 +3395,7 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
         ensureArity(args, 2);
         RecordTypePtr t = recordTypeOfValue(args, 0);
         ObjectPtr obj = unwrapStaticType(args->values[1].type);
-        if (!obj || (obj->objKind != IDENTIFIER))
-            argumentError(1, "expecting field name identifier");
-        IdentifierPtr fname = (Identifier *)obj.ptr();
+        IdentifierPtr fname = objectStringLiteralToIdentifier(obj.ptr(), 1);
         const llvm::StringMap<size_t> &fieldIndexMap = recordFieldIndexMap(t);
         llvm::StringMap<size_t>::const_iterator fi =
             fieldIndexMap.find(fname->str);
@@ -3499,11 +3552,10 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
         ObjectPtr moduleObj = unwrapStaticType(args->values[0].type);
         if (!moduleObj || (moduleObj->objKind != MODULE))
             argumentError(0, "expecting a module");
-        ObjectPtr identObj = unwrapStaticType(args->values[1].type);
-        if (!identObj || (identObj->objKind != IDENTIFIER))
+        Identifier* ident = typeToStaticStringLiteral(args->values[1].type.ptr());
+        if (!ident)
             argumentError(1, "expecting a string literal value");
         Module *module = (Module *)moduleObj.ptr();
-        Identifier *ident = (Identifier *)identObj.ptr();
         ObjectPtr obj = safeLookupPublic(module, ident);
         return analyzeStaticObject(obj);
     }
@@ -3548,10 +3600,10 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
 
     case PRIM_stringLiteralBytes : {
         ensureArity(args, 1);
-        ObjectPtr obj = unwrapStaticType(args->values[0].type);
-        if (!obj || (obj->objKind != IDENTIFIER))
+        Identifier *ident = typeToStaticStringLiteral(args->values[0].type.ptr());
+        if (!ident)
             argumentError(0, "expecting a string literal value");
-        Identifier *ident = (Identifier *)obj.ptr();
+
         MultiPValuePtr result = new MultiPValue();
         for (size_t i = 0, sz = ident->str.size(); i < sz; ++i)
             result->add(PVData(cIntType, true));
@@ -3563,10 +3615,11 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
 
     case PRIM_stringLiteralByteSlice : {
         ensureArity(args, 3);
-        ObjectPtr identObj = unwrapStaticType(args->values[0].type);
-        if (!identObj || (identObj->objKind != IDENTIFIER))
+
+        Identifier *ident = typeToStaticStringLiteral(args->values[0].type.ptr());
+        if (!ident)
             argumentError(0, "expecting a string literal value");
-        Identifier *ident = (Identifier *)identObj.ptr();
+
         ObjectPtr beginObj = unwrapStaticType(args->values[1].type);
         ObjectPtr endObj = unwrapStaticType(args->values[2].type);
         size_t begin = 0, end = 0;
@@ -3582,19 +3635,17 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
             argumentIndexRangeError(1, "starting index",
                                     begin, end);
         llvm::StringRef result(&ident->str[unsigned(begin)], end - begin);
-        return analyzeStaticObject(Identifier::get(result));
+        return new MultiPValue(analyzeStringToStaticStringLiteral(result));
     }
 
     case PRIM_stringLiteralConcat : {
         llvm::SmallString<32> result;
         for (size_t i = 0, sz = args->size(); i < sz; ++i) {
             ObjectPtr obj = unwrapStaticType(args->values[unsigned(i)].type);
-            if (!obj || (obj->objKind != IDENTIFIER))
-                argumentError(i, "expecting a string literal value");
-            Identifier *ident = (Identifier *)obj.ptr();
+            IdentifierPtr ident = objectStringLiteralToIdentifier(obj.ptr(), i);
             result.append(ident->str.begin(), ident->str.end());
         }
-        return analyzeStaticObject(Identifier::get(result));
+        return new MultiPValue(analyzeStringToStaticStringLiteral(result));
     }
 
     case PRIM_stringLiteralFromBytes : {
@@ -3612,7 +3663,7 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
             }
             result.push_back((char)byte);
         }
-        return analyzeStaticObject(Identifier::get(result));
+        return new MultiPValue(analyzeStringToStaticStringLiteral(result));
     }
 
     case PRIM_stringTableConstant :
@@ -3626,7 +3677,8 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
         llvm::SmallString<128> buf;
         llvm::raw_svector_ostream sout(buf);
         printStaticName(sout, obj);
-        return analyzeStaticObject(Identifier::get(sout.str()));
+
+        return new MultiPValue(analyzeStringToStaticStringLiteral(sout.str()));
     }
 
     case PRIM_MainModule : {
@@ -3654,7 +3706,7 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
         ModulePtr m = staticModule(obj);
         if (!m)
             argumentError(0, "value has no associated module");
-        return analyzeStaticObject(Identifier::get(m->moduleName));
+        return new MultiPValue(analyzeStringToStaticStringLiteral(m->moduleName));
     }
 
     case PRIM_ModuleMemberNames : {
@@ -3672,7 +3724,7 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
             i != end;
             ++i)
         {
-            result->add(staticPValue(Identifier::get(i->getKey())));
+            result->add(analyzeStringToStaticStringLiteral(i->getKey()));
         }
         return result;
     }
@@ -3683,19 +3735,16 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
 
     case PRIM_Flag : {
         ensureArity(args, 1);
-        ObjectPtr obj = unwrapStaticType(args->values[0].type);
-        if (obj != NULL && obj->objKind == IDENTIFIER) {
-            Identifier *ident = (Identifier*)obj.ptr();
-
-            llvm::StringMap<string>::const_iterator flag = globalFlags.find(ident->str);
-            string value;
-            if (flag != globalFlags.end())
-                value = flag->second;
-
-            return analyzeStaticObject(Identifier::get(value));
-        } else
+        Identifier* ident = typeToStaticStringLiteral(args->values[0].type.ptr());
+        if (!ident)
             argumentTypeError(0, "identifier", args->values[0].type);
-        return NULL;
+
+        llvm::StringMap<string>::const_iterator flag = globalFlags.find(ident->str);
+        string value;
+        if (flag != globalFlags.end())
+            value = flag->second;
+
+        return new MultiPValue(analyzeStringToStaticStringLiteral(value));
     }
 
     case PRIM_atomicFence : {

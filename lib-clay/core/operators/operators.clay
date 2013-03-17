@@ -514,12 +514,12 @@ alias overload ifExpression(#true, consequent, alternate) = forward consequent;
 alias overload ifExpression(#false, consequent, alternate) = forward alternate;
 
 
-[consequent, alternate when StringLiteral?(consequent) and StringLiteral?(alternate)]
+[consequent, alternate when StringLiteral?(#consequent) and StringLiteral?(#alternate)]
 alias overload ifExpression(condition, #consequent, #alternate) --> ret:StringLiteralRef {
     if (condition)
-        ret <-- StringLiteralRef(consequent);
+        ret <-- StringLiteralRef(#consequent);
     else
-        ret <-- StringLiteralRef(alternate);
+        ret <-- StringLiteralRef(#alternate);
 }
 
 /// @section  asExpression 

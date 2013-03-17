@@ -19,7 +19,15 @@ void Object::print() const {
     llvm::errs() << *this << "\n";
 }
 
-void Env::print() const {
+string Object::toString() const {
+    string r;
+    llvm::raw_string_ostream os(r);
+    os << *this << "\n";
+    return os.str();
+}
+
+#if 0
+void Env::toString() const {
     for (llvm::StringMap<ObjectPtr>::const_iterator entry = entries.begin();
             entry != entries.end(); ++entry)
     {
@@ -38,6 +46,7 @@ void Env::print() const {
         }
     }
 }
+#endif
 
 
 //
@@ -905,12 +914,23 @@ static bool isSafe(char ch)
 void printStaticName(llvm::raw_ostream &out, ObjectPtr x)
 {
     if (x->objKind == IDENTIFIER) {
+        // TODO: not sure useful
+        abort();
         Identifier *y = (Identifier *)x.ptr();
         out << y->str;
+        return;
     }
-    else {
-        printName(out, x);
+
+    if (x->objKind == VALUE_HOLDER) {
+        ValueHolder* valueHolder = (ValueHolder*) x.ptr();
+
+        if (valueHolder->type->typeKind == STRING_LITERAL_TYPE) {
+            out << valueHolder->as<Identifier*>()->str;
+            return;
+        }
     }
+
+    printName(out, x);
 }
 
 void printName(llvm::raw_ostream &out, ObjectPtr x)
@@ -1018,7 +1038,11 @@ void printName(llvm::raw_ostream &out, ObjectPtr x)
     }
     case VALUE_HOLDER : {
         ValueHolder *y = (ValueHolder *)x.ptr();
-        if (isStaticOrTupleOfStatics(y->type)) {
+        if (y->type->typeKind == STRING_LITERAL_TYPE) {
+            // TODO: hack
+            printName(out, y->as<Identifier*>());
+        }
+        else if (isStaticOrTupleOfStatics(y->type)) {
             printStaticOrTupleOfStatics(out, y->type);
         }
         else {
@@ -1148,6 +1172,10 @@ void printValue(llvm::raw_ostream &out, EValuePtr ev)
         }
         break;
     }
+    case STRING_LITERAL_TYPE : {
+        out << ev->as<Identifier*>()->str;
+        break;
+    }
     default :
         break;
     }
@@ -1239,6 +1267,10 @@ void typePrint(llvm::raw_ostream &out, TypePtr t) {
     case COMPLEX_TYPE : {
         ComplexType *x = (ComplexType *)t.ptr();
         out << "Complex" << x->bits;
+        break;
+    }
+    case STRING_LITERAL_TYPE : {
+        out << "StringLiteral";
         break;
     }
     case POINTER_TYPE : {
