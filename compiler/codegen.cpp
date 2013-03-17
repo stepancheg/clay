@@ -275,6 +275,13 @@ CValuePtr staticCValue(ObjectPtr obj, CodegenContext* ctx)
     return new CValue(t, ctx->valueForStatics);
 }
 
+static CValuePtr staticCValueFromIdentifier(Identifier* identifier, CodegenContext* ctx) {
+    TypePtr t = identifierToStaticStringLiteralType(identifier);
+    if (ctx->valueForStatics == NULL)
+        ctx->valueForStatics = ctx->initBuilder->CreateAlloca(llvmType(t));
+    return new CValue(t, ctx->valueForStatics);
+}
+
 static CValuePtr derefValue(CValuePtr cvPtr, CodegenContext* ctx)
 {
     assert(cvPtr->type->typeKind == POINTER_TYPE);
@@ -1325,10 +1332,14 @@ void codegenStaticObject(ObjectPtr x,
     case PRIM_OP :
     case PROCEDURE :
     case MODULE :
-    case INTRINSIC :
-    case IDENTIFIER : {
+    case INTRINSIC : {
         assert(out->size() == 1);
         assert(out->values[0]->type == staticType(x));
+        break;
+    }
+
+    case IDENTIFIER : {
+        abort();
         break;
     }
 
@@ -2685,11 +2696,17 @@ static void interpolateExpr(SourcePtr source, unsigned offset, unsigned length,
         {
             printValue(outstream, new EValue(vh->type, vh->buf));
         }
+        else if (vh->type->typeKind == STRING_LITERAL_TYPE) {
+            Identifier *y = vh->as<Identifier*>();
+            outstream << y->str;
+        }
         else {
             error("only booleans, integers, and float values are supported");
         }
     }
     else if (x->objKind == IDENTIFIER) {
+        abort();
+        // TODO: dead
         Identifier *y = (Identifier *)x.ptr();
         outstream << y->str;
     }
@@ -3737,7 +3754,7 @@ bool codegenStatement(StatementPtr stmt,
                 );
                 call->parenArgs->add(x->exprs->exprs[0]);
                 call->parenArgs->add(y->expr);
-                call->parenArgs->add(new ObjectExpr(y->name.ptr()));
+                call->parenArgs->add(identifierPtrToStaticExpr(y->name.ptr()).ptr());
                 call->parenArgs->exprs.insert(call->parenArgs->exprs.end(), x->exprs->exprs.begin()+2, x->exprs->exprs.end());
                 return codegenStatement(new ExprStatement(call.ptr()), env, ctx);
             }
@@ -4468,7 +4485,7 @@ void codegenExprAssign(ExprPtr left,
         ExprPtr base = x->expr;
         PVData pvBase = safeAnalyzeOne(base, env);
         if (pvBase.type->typeKind != STATIC_TYPE) {
-            CValuePtr cvName = staticCValue(x->name.ptr(), ctx);
+            CValuePtr cvName = staticCValueFromIdentifier(x->name.ptr(), ctx);
             MultiPValuePtr pvArgs = new MultiPValue(pvBase);
             pvArgs->add(PVData(cvName->type, true));
             pvArgs->add(pvRight);

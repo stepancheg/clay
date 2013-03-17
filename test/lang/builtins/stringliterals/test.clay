@@ -5,8 +5,8 @@ import test.*;
 
 main() = testMain(TestSuite("string literals", array(
         TestCase("stringLiteralByteSlice", -> {
-            var foo = stringLiteralByteSlice("foobar", #0, #3);
-            var bar = stringLiteralByteSlice("foobar", #3, #6);
+            var foo = #stringLiteralByteSlice(unwrapStatic("foobar"), 0, 3);
+            var bar = #stringLiteralByteSlice(unwrapStatic("foobar"), 3, 6);
             expectEqual("foo", foo);
             expectEqual("bar", bar);
             expectEqual("foobar", foo ++ bar);

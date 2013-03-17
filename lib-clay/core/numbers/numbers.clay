@@ -418,9 +418,9 @@ forceinline overload (~)(a:A) : A = integerBitwiseNot(a);
 //
 // octal()
 
-[T,I when Integer?(T) and StringLiteral?(I)]
+[T,I when Integer?(T) and StringLiteral?(#I)]
 private _octal(#T, #I)
-    = #foldlValues((n,d) -> T(8)*T(n) + T(d - 0x30), T(0), ..stringLiteralBytes(I));
+    = #foldlValues((n,d) -> T(8)*T(n) + T(d - 0x30), T(0), ..stringLiteralBytes(#I));
 
 define octal;
 overload octal(T, I) = unwrapStatic(_octal(T, I));

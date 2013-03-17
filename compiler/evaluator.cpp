@@ -407,7 +407,9 @@ ObjectPtr makeTupleValue(llvm::ArrayRef<ObjectPtr> elements)
         case RECORD_DECL :
         case VARIANT_DECL :
         case MODULE :
+            break;
         case IDENTIFIER :
+            abort();
             break;
         default :
             allStatics = false;
@@ -1272,10 +1274,14 @@ void evalStaticObject(ObjectPtr x, MultiEValuePtr out)
     case PRIM_OP :
     case PROCEDURE :
     case MODULE :
-    case INTRINSIC :
-    case IDENTIFIER : {
+    case INTRINSIC : {
         assert(out->size() == 1);
         assert(out->values[0]->type == staticType(x));
+        break;
+    }
+
+    case IDENTIFIER : {
+        abort();
         break;
     }
 
@@ -1545,6 +1551,9 @@ void evalCallExpr(ExprPtr callable,
     case PRIM_OP : {
         if ((obj->objKind == PRIM_OP) && !isOverloadablePrimOp(obj)) {
             PrimOpPtr x = (PrimOp *)obj.ptr();
+            //llvm::errs() << "env.print\n";
+            //env->print();
+            //llvm::errs() << ".\n";
             MultiEValuePtr mev = evalMultiAsRef(args, env);
             evalPrimOp(x, mev, out);
             break;
@@ -2566,5 +2575,5 @@ EnvPtr evalBinding(BindingPtr x, EnvPtr env)
 
 }
 
+}
 
-}
