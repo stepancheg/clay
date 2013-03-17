@@ -826,6 +826,9 @@ static void _classifyType(TypePtr type, vector<WordClass>::iterator begin, size_
         NewType *nt = (NewType *)type.ptr();
         _classifyType(newtypeReprType(nt), begin, offset);
     }
+    default: {
+        assert(false);
+    }
     }
 }
 

@@ -128,6 +128,8 @@ MultiPValuePtr analyzeCallByName(InvokeEntry* entry,
 
 void analyzeCodeBody(InvokeEntry* entry);
 
+TypePtr identifierToStaticStringLiteralType(Identifier* identifier);
+
 struct AnalysisContext {
     vector<uint8_t> returnIsRef;
     vector<TypePtr> returnTypes;

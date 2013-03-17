@@ -374,8 +374,10 @@ ObjectPtr lookupEnv(EnvPtr env, IdentifierPtr name) {
 
 ObjectPtr safeLookupEnv(EnvPtr env, IdentifierPtr name) {
     ObjectPtr obj = lookupEnv(env, name);
-    if (obj == NULL)
+    if (obj == NULL) {
+        env->print();
         undefinedNameError(name);
+    }
     return obj;
 }
 

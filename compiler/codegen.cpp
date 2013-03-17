@@ -289,6 +289,13 @@ static CValuePtr staticCValue(ObjectPtr obj, CodegenContext* ctx)
     return new CValue(t, ctx->valueForStatics);
 }
 
+static CValuePtr staticCValueFromIdentifier(Identifier* identifier, CodegenContext* ctx) {
+    TypePtr t = identifierToStaticStringLiteralType(identifier);
+    if (ctx->valueForStatics == NULL)
+        ctx->valueForStatics = ctx->initBuilder->CreateAlloca(llvmType(t));
+    return new CValue(t, ctx->valueForStatics);
+}
+
 static CValuePtr derefValue(CValuePtr cvPtr, CodegenContext* ctx)
 {
     assert(cvPtr->type->typeKind == POINTER_TYPE);
@@ -2756,11 +2763,16 @@ static void interpolateExpr(SourcePtr source, unsigned offset, unsigned length,
         {
             printValue(outstream, new EValue(vh->type, vh->buf));
         }
+        else if (vh->type->typeKind == STRING_LITERAL_TYPE) {
+            Identifier *y = vh->as<Identifier*>();
+            outstream << y->str;
+        }
         else {
             error("only booleans, integers, and float values are supported");
         }
     }
     else if (x->objKind == IDENTIFIER) {
+        // TODO: dead
         Identifier *y = (Identifier *)x.ptr();
         outstream << y->str;
     }
@@ -4637,7 +4649,7 @@ void codegenExprAssign(ExprPtr left,
         ExprPtr base = x->expr;
         PVData pvBase = safeAnalyzeOne(base, env);
         if (pvBase.type->typeKind != STATIC_TYPE) {
-            CValuePtr cvName = staticCValue(x->name.ptr(), ctx);
+            CValuePtr cvName = staticCValueFromIdentifier(x->name.ptr(), ctx);
             MultiPValuePtr pvArgs = new MultiPValue(pvBase);
             pvArgs->add(PVData(cvName->type, true));
             pvArgs->add(pvRight);
@@ -4799,9 +4811,15 @@ static EnumTypePtr valueToEnumType(MultiCValuePtr args, unsigned index)
 static IdentifierPtr valueToIdentifier(MultiCValuePtr args, unsigned index)
 {
     ObjectPtr obj = valueToStatic(args->values[index]);
-    if (!obj || (obj->objKind != IDENTIFIER))
-        argumentError(index, "expecting identifier value");
-    return (Identifier *)obj.ptr();
+    //if (!obj || (obj->objKind != IDENTIFIER))
+    if (!!obj && (obj->objKind == VALUE_HOLDER)) {
+        ValueHolder* valueHolder = (ValueHolder*) obj.ptr();
+        if (valueHolder->type->typeKind == STRING_LITERAL_TYPE) {
+            return valueHolder->as<Identifier*>();
+        }
+    }
+    argumentError(index, "expecting identifier value");
+    throw 1;
 }
 
 
@@ -6496,7 +6514,11 @@ void codegenPrimOp(PrimOpPtr x,
         CValuePtr cv0 = args->values[0];
         if (cv0->type->typeKind == STATIC_TYPE) {
             StaticType *st = (StaticType *)cv0->type.ptr();
-            result = (st->obj->objKind == IDENTIFIER);
+            //result = (st->obj->objKind == IDENTIFIER);
+            if (st->obj->objKind == VALUE_HOLDER) {
+                ValueHolder* valueHolder = (ValueHolder*) st->obj.ptr();
+                result = valueHolder->type->typeKind == STRING_LITERAL_TYPE;
+            }
         }
         ValueHolderPtr vh = boolToValueHolder(result);
         codegenStaticObject(vh.ptr(), ctx, out);

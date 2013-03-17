@@ -905,6 +905,7 @@ static bool isSafe(char ch)
 void printStaticName(llvm::raw_ostream &out, ObjectPtr x)
 {
     if (x->objKind == IDENTIFIER) {
+        // TODO: not sure reachable
         Identifier *y = (Identifier *)x.ptr();
         out << y->str;
     }
@@ -1148,6 +1149,10 @@ void printValue(llvm::raw_ostream &out, EValuePtr ev)
         }
         break;
     }
+    case STRING_LITERAL_TYPE : {
+        out << ev->as<Identifier*>()->str;
+        break;
+    }
     default :
         break;
     }
@@ -1239,6 +1244,10 @@ void typePrint(llvm::raw_ostream &out, TypePtr t) {
     case COMPLEX_TYPE : {
         ComplexType *x = (ComplexType *)t.ptr();
         out << "Complex" << x->bits;
+        break;
+    }
+    case STRING_LITERAL_TYPE : {
+        out << "StringLiteral";
         break;
     }
     case POINTER_TYPE : {

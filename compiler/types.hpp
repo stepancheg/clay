@@ -35,6 +35,8 @@ extern TypePtr cIntType;
 extern TypePtr cSizeTType;
 extern TypePtr cPtrDiffTType;
 
+extern TypePtr stringLiteralType;
+
 void initTypes();
 
 TypePtr integerType(unsigned bits, bool isSigned);

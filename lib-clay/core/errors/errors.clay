@@ -7,7 +7,7 @@ import hints.(likely);
 
 [fmt]
 errorWithPrintfNoThrow(#fmt, ..e) : {
-    libc.fprintf(libc.stderr, cstring(strl("error: ", fmt, "\n")), ..e);
+    libc.fprintf(libc.stderr, cstring(strl("error: ", #fmt, "\n")), ..e);
     showBacktrace();
     libc.abort();
 }
