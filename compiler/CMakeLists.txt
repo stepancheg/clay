@@ -27,6 +27,7 @@ set(COMPILER_SOURCES
     patterns.cpp
     printer.cpp
     profiler.cpp
+    string_literal.cpp
     types.cpp
 )
 
