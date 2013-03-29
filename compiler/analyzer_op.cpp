@@ -717,7 +717,7 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
             argumentError(1, "expecting a string literal value");
         Module *module = (Module *)moduleObj.ptr();
         Identifier *ident = (Identifier *)identObj.ptr();
-        ObjectPtr obj = safeLookupPublic(module, ident);
+        ObjectPtr obj = safeLookupPublic(module, ident->str);
         return analyzeStaticObject(obj);
     }
 

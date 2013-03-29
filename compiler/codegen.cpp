@@ -737,7 +737,7 @@ MultiCValuePtr codegenExprAsRef(ExprPtr expr,
     switch (expr->exprKind) {
     case NAME_REF : {
         NameRef *x = (NameRef *)expr.ptr();
-        ObjectPtr y = safeLookupEnv(env, x->name);
+        ObjectPtr y = safeLookupEnv(env, x->name->str);
         if (y->objKind == EXPRESSION) {
             ExprPtr z = (Expr *)y.ptr();
             return codegenExprAsRef(z, env, ctx);
@@ -1009,7 +1009,7 @@ void codegenExpr(ExprPtr expr,
 
     case NAME_REF : {
         NameRef *x = (NameRef *)expr.ptr();
-        ObjectPtr y = safeLookupEnv(env, x->name);
+        ObjectPtr y = safeLookupEnv(env, x->name->str);
         if (y->objKind == EXPRESSION) {
             ExprPtr z = (Expr *)y.ptr();
             codegenExpr(z, env, ctx, out);
@@ -1063,7 +1063,7 @@ void codegenExpr(ExprPtr expr,
             StaticType *st = (StaticType *)pv.type.ptr();
             if (st->obj->objKind == MODULE) {
                 Module *m = (Module *)st->obj.ptr();
-                ObjectPtr obj = safeLookupPublic(m, x->name);
+                ObjectPtr obj = safeLookupPublic(m, x->name->str);
                 codegenStaticObject(obj, ctx, out);
                 break;
             }
@@ -2136,7 +2136,7 @@ void codegenCallExpr(ExprPtr callable,
         && (callable->exprKind == NAME_REF))
     {
         NameRef *x = (NameRef *)callable.ptr();
-        ObjectPtr y = safeLookupEnv(env, x->name);
+        ObjectPtr y = safeLookupEnv(env, x->name->str);
         if (y->objKind == EXTERNAL_PROCEDURE) {
             ExternalProcedure *z = (ExternalProcedure *)y.ptr();
             if (!z->llvmFunc)
@@ -4800,7 +4800,7 @@ void codegenEntryPoints(ModulePtr module, bool importedExternals)
     generateLLVMCtorsAndDtors();
     codegenModuleEntryPoints(module, importedExternals);
 
-    ObjectPtr mainProc = lookupPrivate(module, Identifier::get("main"));
+    ObjectPtr mainProc = lookupPrivate(module, "main");
     
     if (mainProc != NULL)
         codegenMain(module);

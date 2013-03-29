@@ -166,7 +166,7 @@ static void initializeLambdaWithFreeVars(LambdaPtr x, EnvPtr env,
         NameRefPtr nameRef = new NameRef(ident);
 
         TypePtr type;
-        ObjectPtr obj = safeLookupEnv(env, ident);
+        ObjectPtr obj = safeLookupEnv(env, ident->str);
         checkForeignExpr(obj, env);
         switch (obj->objKind) {
         case PVALUE :
@@ -532,7 +532,7 @@ void convertFreeVars(ExprPtr &x, EnvPtr env, LambdaContext &ctx)
         NameRef *y = (NameRef *)x.ptr();
         bool isNonLocal = false;
         bool isGlobal = false;
-        ObjectPtr z = lookupEnvEx(env, y->name, ctx.nonLocalEnv,
+        ObjectPtr z = lookupEnvEx(env, y->name->str, ctx.nonLocalEnv,
                                   isNonLocal, isGlobal);
         if (isNonLocal && !isGlobal) {
             checkForeignExpr(z, env);

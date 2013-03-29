@@ -98,7 +98,7 @@ namespace clay {
             if (tokens[i].tokenKind == T_IDENTIFIER) {
                 Str identStr = tokens[i].str;
 
-                ObjectPtr obj = lookupPrivate(module, Identifier::get(identStr));
+                ObjectPtr obj = lookupPrivate(module, identStr);
                 if (obj == NULL || obj->objKind != PROCEDURE) {
                     llvm::errs() << identStr << " is not a procedure name\n";
                     continue;
