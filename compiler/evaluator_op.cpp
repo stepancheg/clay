@@ -5,6 +5,7 @@
 #include "loader.hpp"
 #include "env.hpp"
 #include "analyzer.hpp"
+#include "string_literal.hpp"
 
 #include "evaluator_op.hpp"
 
@@ -1014,29 +1015,6 @@ static void op_pointerToInt(EValuePtr dest, EValuePtr ev)
 //
 // evalPrimOp
 //
-static const void *evalStringTableConstant(llvm::StringRef s)
-{
-    llvm::StringMap<const void*>::const_iterator oldConstant = staticStringTableConstants.find(s);
-    if (oldConstant != staticStringTableConstants.end())
-        return oldConstant->second;
-    size_t bits = typeSize(cSizeTType);
-    size_t size = s.size();
-    void *buf = malloc(size + bits + 1);
-    switch (bits) {
-    case 4:
-        *(size32_t*)buf = (size32_t)size;
-        break;
-    case 8:
-        *(size64_t*)buf = size;
-        break;
-    default:
-        error("unsupported pointer width");
-    }
-    memcpy((void*)((char*)buf + bits), (const void*)s.begin(), s.size());
-    ((char*)buf)[bits + s.size()] = 0;
-    staticStringTableConstants[s] = (const void*)buf;
-    return buf;
-}
 
 void evalPrimOp(PrimOpPtr x, MultiEValuePtr args, MultiEValuePtr out)
 {
@@ -2129,12 +2107,11 @@ void evalPrimOp(PrimOpPtr x, MultiEValuePtr args, MultiEValuePtr out)
     case PRIM_stringTableConstant : {
         ensureArity(args, 1);
         llvm::StringRef ident = valueToStringRef(args, 0);
-        const void *value = evalStringTableConstant(ident);
 
         assert(out->size() == 1);
         EValuePtr out0 = out->values[0];
         assert(out0->type == pointerType(cSizeTType));
-        out0->as<const void*>() = value;
+        out0->as<const void*>() = StringLiteralRepr::get(ident).sizep;
         break;
     }
 
