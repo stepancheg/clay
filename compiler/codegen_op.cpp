@@ -139,17 +139,12 @@ static EnumTypePtr valueToEnumType(MultiCValuePtr args, unsigned index)
     return (EnumType *)t.ptr();
 }
 
-static IdentifierPtr valueToIdentifier(MultiCValuePtr args, unsigned index)
+static llvm::StringRef valueToStringRef(MultiCValuePtr args, unsigned index)
 {
     ObjectPtr obj = valueToStatic(args->values[index]);
     if (!obj || (obj->objKind != IDENTIFIER))
         argumentError(index, "expecting identifier value");
-    return (Identifier *)obj.ptr();
-}
-
-static llvm::StringRef valueToStringRef(MultiCValuePtr args, unsigned index)
-{
-    return valueToIdentifier(args, index)->str;
+    return ((Identifier *)obj.ptr())->str;
 }
 
 
@@ -1954,7 +1949,7 @@ void codegenPrimOp(PrimOpPtr x,
         if (moduleObj->objKind != MODULE)
             argumentError(0, "expecting a module");
         Module *module = (Module *)moduleObj.ptr();
-        IdentifierPtr ident = valueToIdentifier(args, 1);
+        llvm::StringRef ident = valueToStringRef(args, 1);
         ObjectPtr obj = safeLookupPublic(module, ident);
         codegenStaticObject(obj, ctx, out);
         break;

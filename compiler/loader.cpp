@@ -1322,11 +1322,11 @@ ModulePtr preludeModule() {
     return cached;
 }
 
-static IdentifierPtr fnameToIdent(llvm::StringRef str) {
+static llvm::StringRef fnameToIdent(llvm::StringRef str) {
     string s = str;
     if ((s.size() > 0) && (s[s.size()-1] == 'P'))
         s[s.size()-1] = '?';
-    return Identifier::get(s);
+    return Identifier::get(s)->str;
 }
 
 static ObjectPtr convertObject(ObjectPtr x) {

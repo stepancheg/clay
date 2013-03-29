@@ -315,7 +315,7 @@ void evaluatePredicate(llvm::ArrayRef<PatternVar> patternVars,
     ExprPtr predicate, EnvPtr env)
 {
     for (size_t i = 0; i < patternVars.size(); ++i) {
-        if (lookupEnv(env, patternVars[i].name) == NULL)
+        if (lookupEnv(env, patternVars[i].name->str) == NULL)
             error(patternVars[i].name, "unbound pattern variable");
     }
     if (predicate != NULL) {
@@ -1002,7 +1002,7 @@ void evalExpr(ExprPtr expr, EnvPtr env, MultiEValuePtr out)
 
     case NAME_REF : {
         NameRef *x = (NameRef *)expr.ptr();
-        ObjectPtr y = safeLookupEnv(env, x->name);
+        ObjectPtr y = safeLookupEnv(env, x->name->str);
         if (y->objKind == EXPRESSION) {
             ExprPtr z = (Expr *)y.ptr();
             evalExpr(z, env, out);
@@ -1057,7 +1057,7 @@ void evalExpr(ExprPtr expr, EnvPtr env, MultiEValuePtr out)
             StaticType *st = (StaticType *)pv.type.ptr();
             if (st->obj->objKind == MODULE) {
                 Module *m = (Module *)st->obj.ptr();
-                ObjectPtr obj = safeLookupPublic(m, x->name);
+                ObjectPtr obj = safeLookupPublic(m, x->name->str);
                 evalStaticObject(obj, out);
                 break;
             }

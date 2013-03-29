@@ -563,7 +563,7 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
 
     case NAME_REF : {
         NameRef *x = (NameRef *)expr.ptr();
-        ObjectPtr y = safeLookupEnv(env, x->name);
+        ObjectPtr y = safeLookupEnv(env, x->name->str);
         if (y->objKind == EXPRESSION) {
             ExprPtr z = (Expr *)y.ptr();
             return analyzeExpr(z, env);
@@ -591,7 +591,7 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
 
     case ARG_EXPR : {
         ARGExpr *arg = (ARGExpr *)expr.ptr();
-        ObjectPtr obj = safeLookupEnv(env, arg->name);
+        ObjectPtr obj = safeLookupEnv(env, arg->name->str);
         string argString;
         if (obj->objKind == EXPRESSION) {
             Expr *expr = (Expr*)obj.ptr();
@@ -649,7 +649,7 @@ static MultiPValuePtr analyzeExpr2(ExprPtr expr, EnvPtr env)
             StaticType *st = (StaticType *)pv.type.ptr();
             if (st->obj->objKind == MODULE) {
                 Module *m = (Module *)st->obj.ptr();
-                ObjectPtr obj = safeLookupPublic(m, x->name);
+                ObjectPtr obj = safeLookupPublic(m, x->name->str);
                 return analyzeStaticObject(obj);
             }
         }

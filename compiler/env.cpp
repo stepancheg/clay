@@ -47,10 +47,10 @@ static void suggestModules(llvm::raw_ostream &err, set<string> const &moduleName
     }
 }
 
-static void ambiguousImportError(IdentifierPtr name, ImportSet const &candidates) {
+static void ambiguousImportError(llvm::StringRef name, ImportSet const &candidates) {
     string buf;
     llvm::raw_string_ostream err(buf);
-    err << "ambiguous imported symbol: " << name->str;
+    err << "ambiguous imported symbol: " << name;
     set<string> moduleNames;
     for (const ObjectPtr *i = candidates.begin(), *end = candidates.end();
          i != end;
@@ -60,14 +60,14 @@ static void ambiguousImportError(IdentifierPtr name, ImportSet const &candidates
     }
 
     err << "\n  disambiguate with one of:";
-    suggestModules(err, moduleNames, name->str);
-    error(name, err.str());
+    suggestModules(err, moduleNames, name);
+    error(err.str());
 }
 
-static void undefinedNameError(IdentifierPtr name) {
+static void undefinedNameError(llvm::StringRef name) {
     string buf;
     llvm::raw_string_ostream err(buf);
-    err << "undefined name: " << name->str;
+    err << "undefined name: " << name;
     set<string> suggestModuleNames;
 
     for (llvm::StringMap<ModulePtr>::const_iterator i = globalModules.begin(), end = globalModules.end();
@@ -80,10 +80,10 @@ static void undefinedNameError(IdentifierPtr name) {
 
     if (!suggestModuleNames.empty()) {
         err << "\n  maybe you need one of:";
-        suggestModules(err, suggestModuleNames, name->str);
+        suggestModules(err, suggestModuleNames, name);
     }
 
-    error(name, err.str());
+    error(err.str());
 
 }
 
@@ -279,10 +279,10 @@ static void addImportedSymbols(ModulePtr module,
 // lookupPrivate
 //
 
-ObjectPtr lookupPrivate(ModulePtr module, IdentifierPtr name) {
+ObjectPtr lookupPrivate(ModulePtr module, llvm::StringRef name) {
 retry:
     llvm::StringMap<ImportSet>::const_iterator i =
-        module->allSymbols.find(name->str);
+        module->allSymbols.find(name);
     if ((i == module->allSymbols.end()) || (i->second.empty())) {
         if (!module->allSymbolsLoaded) {
             getAllSymbols(module);
@@ -308,10 +308,10 @@ retry:
 // lookupPublic, safeLookupPublic
 //
 
-ObjectPtr lookupPublic(ModulePtr module, IdentifierPtr name) {
+ObjectPtr lookupPublic(ModulePtr module, llvm::StringRef name) {
 retry:
     llvm::StringMap<ImportSet>::const_iterator i =
-        module->publicSymbols.find(name->str);
+        module->publicSymbols.find(name);
     if ((i == module->publicSymbols.end()) || (i->second.empty())) {
         
         if (!module->publicSymbolsLoaded) {
@@ -328,7 +328,7 @@ retry:
     return *objs.begin();
 }
 
-ObjectPtr safeLookupPublic(ModulePtr module, IdentifierPtr name) {
+ObjectPtr safeLookupPublic(ModulePtr module, llvm::StringRef name) {
     ObjectPtr x = lookupPublic(module, name);
     if (!x)
         undefinedNameError(name);
@@ -348,8 +348,8 @@ void addLocal(EnvPtr env, IdentifierPtr name, ObjectPtr value) {
     env->entries[name->str] = value;
 }
 
-ObjectPtr lookupEnv(EnvPtr env, IdentifierPtr name) {
-    MapIter i = env->entries.find(name->str);
+ObjectPtr lookupEnv(EnvPtr env, llvm::StringRef name) {
+    MapIter i = env->entries.find(name);
     if (i != env->entries.end())
         return i->second;
     if (env->parent.ptr()) {
@@ -372,7 +372,7 @@ ObjectPtr lookupEnv(EnvPtr env, IdentifierPtr name) {
         return NULL;
 }
 
-ObjectPtr safeLookupEnv(EnvPtr env, IdentifierPtr name) {
+ObjectPtr safeLookupEnv(EnvPtr env, llvm::StringRef name) {
     ObjectPtr obj = lookupEnv(env, name);
     if (obj == NULL)
         undefinedNameError(name);
@@ -418,14 +418,14 @@ llvm::DINameSpace lookupModuleDebugInfo(EnvPtr env) {
 // lookupEnvEx
 //
 
-ObjectPtr lookupEnvEx(EnvPtr env, IdentifierPtr name,
+ObjectPtr lookupEnvEx(EnvPtr env, llvm::StringRef name,
                       EnvPtr nonLocalEnv, bool &isNonLocal,
                       bool &isGlobal)
 {
     if (nonLocalEnv == env)
         nonLocalEnv = NULL;
 
-    MapIter i = env->entries.find(name->str);
+    MapIter i = env->entries.find(name);
     if (i != env->entries.end()) {
         if (!nonLocalEnv)
             isNonLocal = true;
