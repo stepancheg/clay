@@ -515,11 +515,11 @@ MultiPValuePtr analyzePrimOp(PrimOpPtr x, MultiPValuePtr args)
         size_t i = 0;
         if (!second || !staticToSizeTOrInt(second, i))
             argumentError(1, "expecting static SizeT or Int value");
-        const vector<IdentifierPtr> fieldNames = recordFieldNames(rt);
+        const vector<llvm::StringRef> fieldNames = recordFieldNames(rt);
         if (i >= fieldNames.size())
             argumentIndexRangeError(1, "record field index",
                                     i, fieldNames.size());
-        return new MultiPValue(staticPValue(fieldNames[i].ptr()));
+        return new MultiPValue(staticPValue(Identifier::get(fieldNames[i])));
     }
 
     case PRIM_RecordWithFieldP :

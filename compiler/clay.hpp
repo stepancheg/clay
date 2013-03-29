@@ -2633,8 +2633,9 @@ struct RecordType : public Type {
 
     const vector<ObjectPtr> params;
 
-    vector<IdentifierPtr> fieldNames;
+    vector<llvm::StringRef> fieldNames;
     vector<TypePtr> fieldTypes;
+    vector<Location> fieldLocations;
     
     llvm::StringMap<size_t> fieldIndexMap;
 

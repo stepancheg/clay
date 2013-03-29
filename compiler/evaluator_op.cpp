@@ -1771,11 +1771,11 @@ void evalPrimOp(PrimOpPtr x, MultiEValuePtr args, MultiEValuePtr out)
         ensureArity(args, 2);
         RecordTypePtr rt = valueToRecordType(args, 0);
         size_t i = valueToStaticSizeTOrInt(args, 1);
-        llvm::ArrayRef<IdentifierPtr> fieldNames = recordFieldNames(rt);
+        llvm::ArrayRef<llvm::StringRef> fieldNames = recordFieldNames(rt);
         if (i >= fieldNames.size())
             argumentIndexRangeError(1, "record field index",
                                     i, fieldNames.size());
-        evalStaticObject(fieldNames[i].ptr(), out);
+        evalStaticObject(Identifier::get(fieldNames[i]), out);
         break;
     }
 

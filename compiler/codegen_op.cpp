@@ -1704,11 +1704,11 @@ void codegenPrimOp(PrimOpPtr x,
         ensureArity(args, 2);
         RecordTypePtr rt = valueToRecordType(args, 0);
         size_t i = valueToStaticSizeTOrInt(args, 1);
-        llvm::ArrayRef<IdentifierPtr> fieldNames = recordFieldNames(rt);
+        llvm::ArrayRef<llvm::StringRef> fieldNames = recordFieldNames(rt);
         if (i >= fieldNames.size())
             argumentIndexRangeError(1, "record field index",
                                     i, fieldNames.size());
-        codegenStaticObject(fieldNames[i].ptr(), ctx, out);
+        codegenStaticObject(Identifier::get(fieldNames[i]), ctx, out);
         break;
     }
 

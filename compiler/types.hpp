@@ -68,7 +68,7 @@ bool isPointerOrCodePointerType(TypePtr t);
 bool isStaticOrTupleOfStatics(TypePtr t);
 
 void initializeRecordFields(RecordTypePtr t);
-llvm::ArrayRef<IdentifierPtr> recordFieldNames(RecordTypePtr t);
+llvm::ArrayRef<llvm::StringRef> recordFieldNames(RecordTypePtr t);
 llvm::ArrayRef<TypePtr> recordFieldTypes(RecordTypePtr t);
 const llvm::StringMap<size_t> &recordFieldIndexMap(RecordTypePtr t);
 

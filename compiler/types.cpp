@@ -719,7 +719,8 @@ void initializeRecordFields(RecordTypePtr t) {
                               "tuple of (name,type)");
             t->fieldIndexMap[name->str] = i;
             t->fieldTypes.push_back(type);
-            t->fieldNames.push_back(name);
+            t->fieldNames.push_back(name->str);
+            t->fieldLocations.push_back(name->location);
         }
     }
     else {
@@ -737,14 +738,15 @@ void initializeRecordFields(RecordTypePtr t) {
                 TypePtr ftype = evaluateType(x->type, env);
                 t->fieldTypes.push_back(ftype);
             }
-            t->fieldNames.push_back(x->name);
+            t->fieldNames.push_back(x->name->str);
+            t->fieldLocations.push_back(x->name->location);
             t->fieldIndexMap[x->name->str] = i;
             
         }
     }
 }
 
-llvm::ArrayRef<IdentifierPtr> recordFieldNames(RecordTypePtr t) {
+llvm::ArrayRef<llvm::StringRef> recordFieldNames(RecordTypePtr t) {
     if (!t->fieldsInitialized)
         initializeRecordFields(t);
     return t->fieldNames;
@@ -1556,7 +1558,7 @@ static void defineLLVMType(TypePtr t) {
         if (llvmDIBuilder != NULL) {
             llvm::TrackingVH<llvm::MDNode> placeholderNode = (llvm::MDNode*)x->getDebugInfo();
             llvm::DIType placeholder(placeholderNode);
-            llvm::ArrayRef<IdentifierPtr> fieldNames = recordFieldNames(x);
+            llvm::ArrayRef<llvm::StringRef> fieldNames = recordFieldNames(x);
             vector<llvm::Value*> members;
             size_t debugOffset = 0;
             for (size_t i = 0; i < fieldNames.size(); ++i) {
@@ -1571,7 +1573,7 @@ static void defineLLVMType(TypePtr t) {
                             size_t debugSize = debugTypeSize(memberLLT);
                             debugOffset = alignedUpTo(debugOffset, debugAlign);
 
-                            Location fieldLocation = fieldNames[i]->location;
+                            Location fieldLocation = x->fieldLocations[i];
                             if (!fieldLocation.ok())
                                 fieldLocation = x->record->location;
                             unsigned fieldLine, fieldColumn;
@@ -1596,14 +1598,14 @@ static void defineLLVMType(TypePtr t) {
                         size_t debugSize = debugTypeSize(memberLLT);
                         debugOffset = alignedUpTo(debugOffset, debugAlign);
 
-                        Location fieldLocation = fieldNames[i]->location;
+                        Location fieldLocation = x->fieldLocations[i];
                         if (!fieldLocation.ok())
                             fieldLocation = x->record->location;
                         unsigned fieldLine, fieldColumn;
                         llvm::DIFile fieldFile = getDebugLineCol(fieldLocation, fieldLine, fieldColumn);
                         members.push_back(llvmDIBuilder->createMemberType(
                             placeholder,
-                            fieldNames[i]->str,
+                            fieldNames[i],
                             fieldFile, // file
                             fieldLine, // lineNo
                             debugSize, // size
@@ -1620,14 +1622,14 @@ static void defineLLVMType(TypePtr t) {
                     size_t debugSize = debugTypeSize(memberLLT);
                     debugOffset = alignedUpTo(debugOffset, debugAlign);
 
-                    Location fieldLocation = fieldNames[i]->location;
+                    Location fieldLocation = x->fieldLocations[i];
                     if (!fieldLocation.ok())
                         fieldLocation = x->record->location;
                     unsigned fieldLine, fieldColumn;
                     llvm::DIFile fieldFile = getDebugLineCol(fieldLocation, fieldLine, fieldColumn);
                     members.push_back(llvmDIBuilder->createMemberType(
                         placeholder,
-                        fieldNames[i]->str,
+                        fieldNames[i],
                         fieldFile, // file
                         fieldLine, // lineNo
                         debugSize, // size
