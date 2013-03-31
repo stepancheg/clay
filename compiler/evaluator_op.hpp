@@ -9,6 +9,7 @@ namespace clay {
 
 
 void evalPrimOp(PrimOpPtr x, MultiEValuePtr args, MultiEValuePtr out);
+EValue tupleRef(EValue* tuple, unsigned index);
 
 
 }

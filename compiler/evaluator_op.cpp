@@ -1011,6 +1011,20 @@ static void op_pointerToInt(EValuePtr dest, EValuePtr ev)
 }
 
 
+EValue tupleRef(EValue* tuple, unsigned index) {
+    if (tuple->type->typeKind != TUPLE_TYPE)
+        error("value is not a tuple");
+
+    TupleType* tupleType = (TupleType*) tuple->type.ptr();
+
+    if (index >= tupleType->elementTypes.size())
+        indexRangeError( "tuple element index", index, tupleType->elementTypes.size());
+    const llvm::StructLayout *layout = tupleTypeLayout(tupleType);
+    char *ptr = tuple->addr + layout->getElementOffset(unsigned(index));
+    return EValue(tupleType->elementTypes[index], ptr);
+}
+
+
 
 //
 // evalPrimOp
@@ -1683,15 +1697,11 @@ void evalPrimOp(PrimOpPtr x, MultiEValuePtr args, MultiEValuePtr out)
         TupleTypePtr tt;
         EValuePtr etuple = tupleValue(args, 0, tt);
         size_t i = valueToStaticSizeTOrInt(args, 1);
-        if (i >= tt->elementTypes.size())
-            argumentIndexRangeError(1, "tuple element index",
-                                    i, tt->elementTypes.size());
-        const llvm::StructLayout *layout = tupleTypeLayout(tt.ptr());
-        char *ptr = etuple->addr + layout->getElementOffset(unsigned(i));
+        EValue element = tupleRef(etuple.ptr(), i);
         assert(out->size() == 1);
         EValuePtr out0 = out->values[0];
-        assert(out0->type == pointerType(tt->elementTypes[i]));
-        out0->as<void*>() = (void *)ptr;
+        assert(out0->type == pointerType(element.type));
+        out0->as<void*>() = element.addr;
         break;
     }
 
